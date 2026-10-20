@@ -1,0 +1,435 @@
+// FlightLeads data model (product name is a placeholder; see src/lib/brand.ts).
+//
+// Conventions
+// - Multi-tenant from day one: every school is an Organization, and every tenant table carries
+//   `orgId`. Services in src/modules/* always filter by the caller's orgId; never query a tenant
+//   table without it.
+// - UUID primary keys, UTC timestamps (timestamptz).
+// - Leads are closed out by moving them to a LOST/WON stage, not deleted, so the timeline stays.
+//   Deleting a lead (owner-only) removes its activities and tasks with it.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Identity (tables required by better-auth: user, session, account, verification)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String
+  email         String       @unique
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @db.Timestamptz(3)
+  sessions      Session[]
+  accounts      Account[]
+  memberships   Membership[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+/// Auth-provider account (better-auth), not a customer account.
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+enum Plan {
+  TRIAL
+  STARTER
+  PRO
+}
+
+/// One flight school (a paying customer of the product).
+model Organization {
+  id           String          @id @default(uuid()) @db.Uuid
+  name         String
+  /// IANA zone used for "today", due dates and reports.
+  timeZone     String          @default("America/New_York")
+  /// "en" | "es": language for text the system writes (automatic task titles, future emails).
+  locale       String          @default("en")
+  plan         Plan            @default(TRIAL)
+  /// When false, agents only see leads assigned to them.
+  agentsSeeAll Boolean         @default(false)
+  /// How leads that arrive automatically (forms, ads, webhooks) get an owner.
+  assignMode   AssignMode      @default(ROUND_ROBIN)
+  /// Membership that received the last round-robin lead.
+  rrCursorId   String?         @db.Uuid
+  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
+  memberships  Membership[]
+  invites      Invite[]
+  stages       PipelineStage[]
+  leads        Lead[]
+  activities   Activity[]
+  tasks        Task[]
+  integrations Integration[]
+  intakeEvents IntakeEvent[]
+  metaPages    MetaPage[]
+}
+
+enum AssignMode {
+  /// Leave new automatic leads unassigned for a manager to hand out.
+  NONE
+  /// Rotate through active agents (managers if there are no agents).
+  ROUND_ROBIN
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  AGENT
+}
+
+model Membership {
+  id        String       @id @default(uuid()) @db.Uuid
+  orgId     String       @db.Uuid
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String       @db.Uuid
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role         @default(AGENT)
+  /// Deactivated members keep their history but cannot sign in to this school.
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+
+  defaultFor     Integration[] @relation("IntegrationOwner")
+  ownedLeads     Lead[]        @relation("LeadOwner")
+  activities     Activity[]
+  assignedTasks  Task[]        @relation("TaskAssignee")
+  createdTasks   Task[]        @relation("TaskCreator")
+  completedTasks Task[]        @relation("TaskCompleter")
+  sentInvites    Invite[]
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+/// A link that lets someone join a school. Shared by copy/paste until email sending exists.
+model Invite {
+  id          String       @id @default(uuid()) @db.Uuid
+  orgId       String       @db.Uuid
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email       String
+  role        Role         @default(AGENT)
+  /// SHA-256 of the token; the raw token only ever lives in the link.
+  tokenHash   String       @unique
+  invitedById String       @db.Uuid
+  invitedBy   Membership   @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  expiresAt   DateTime     @db.Timestamptz(3)
+  acceptedAt  DateTime?    @db.Timestamptz(3)
+  revokedAt   DateTime?    @db.Timestamptz(3)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------
+// CRM
+// ---------------------------------------------------------------------------
+
+enum StageKind {
+  OPEN
+  WON
+  LOST
+}
+
+/// Columns of the pipeline board. Each school can rename/reorder them.
+model PipelineStage {
+  id        String       @id @default(uuid()) @db.Uuid
+  orgId     String       @db.Uuid
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int
+  kind      StageKind    @default(OPEN)
+  color     String       @default("slate")
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  leads     Lead[]
+
+  @@index([orgId, position])
+}
+
+enum LeadSource {
+  WEBSITE
+  PHONE
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  GOOGLE
+  WALK_IN
+  REFERRAL
+  OTHER
+}
+
+enum Program {
+  DISCOVERY
+  PRIVATE
+  INSTRUMENT
+  COMMERCIAL
+  CFI
+  CAREER
+  OTHER
+}
+
+enum MedicalStatus {
+  UNKNOWN
+  NONE
+  SCHEDULED
+  HAS_MEDICAL
+  ISSUE
+}
+
+enum Funding {
+  UNKNOWN
+  SELF_PAY
+  LOAN
+  VA
+  EMPLOYER
+  OTHER
+}
+
+model Lead {
+  id              String        @id @default(uuid()) @db.Uuid
+  orgId           String        @db.Uuid
+  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  firstName       String
+  lastName        String        @default("")
+  email           String?
+  /// Digits only (with country code when known), used for duplicate detection.
+  phone           String?
+  /// "en" | "es" — the language the lead prefers to be contacted in.
+  language        String        @default("en")
+  source          LeadSource    @default(OTHER)
+  /// Free text: which form, which ad, who referred them.
+  sourceDetail    String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  program         Program       @default(PRIVATE)
+  medical         MedicalStatus @default(UNKNOWN)
+  funding         Funding       @default(UNKNOWN)
+  /// When they want to start, in their words ("next month", "after graduation").
+  timeline        String?
+  isInternational Boolean       @default(false)
+  stageId         String        @db.Uuid
+  stage           PipelineStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  /// Order inside the stage column (fractional so a move only rewrites one row).
+  position        Float         @default(0)
+  ownerId         String?       @db.Uuid
+  owner           Membership?   @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  lostReason      String?
+  lastContactAt   DateTime?     @db.Timestamptz(3)
+  stageChangedAt  DateTime      @default(now()) @db.Timestamptz(3)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  activities      Activity[]
+  tasks           Task[]
+  intakeEvents    IntakeEvent[]
+
+  @@index([orgId, stageId, position])
+  @@index([orgId, ownerId])
+  @@index([orgId, email])
+  @@index([orgId, phone])
+  @@index([orgId, createdAt])
+}
+
+enum ActivityType {
+  CREATED
+  NOTE
+  CALL
+  EMAIL
+  SMS
+  MEETING
+  STAGE_CHANGE
+  ASSIGNED
+  TASK_DONE
+  UPDATED
+  /// A form/ad/webhook submission from someone already in the system.
+  FORM_SUBMITTED
+}
+
+/// The lead's timeline. Append-only from the app.
+model Activity {
+  id        String       @id @default(uuid()) @db.Uuid
+  orgId     String       @db.Uuid
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId    String       @db.Uuid
+  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  /// Null when the system created it (e.g. a web form).
+  actorId   String?      @db.Uuid
+  actor     Membership?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  type      ActivityType
+  body      String?
+  /// Structured details: call outcome/direction, from/to stage, assignee, changed fields.
+  meta      Json?
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([orgId, leadId, createdAt])
+  @@index([orgId, actorId, createdAt])
+}
+
+model Task {
+  id            String       @id @default(uuid()) @db.Uuid
+  orgId         String       @db.Uuid
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId        String       @db.Uuid
+  lead          Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  title         String
+  dueAt         DateTime     @db.Timestamptz(3)
+  assigneeId    String?      @db.Uuid
+  assignee      Membership?  @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById   String?      @db.Uuid
+  createdBy     Membership?  @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  completedAt   DateTime?    @db.Timestamptz(3)
+  completedById String?      @db.Uuid
+  completedBy   Membership?  @relation("TaskCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([orgId, assigneeId, completedAt, dueAt])
+  @@index([orgId, leadId])
+}
+
+// ---------------------------------------------------------------------------
+// Automatic lead intake
+// ---------------------------------------------------------------------------
+
+enum IntegrationKind {
+  /// Hosted form to embed on the school's website.
+  WEB_FORM
+  /// Generic JSON/form POST: Zapier, Make, website builders, anything.
+  WEBHOOK
+  /// Google Ads lead form extension webhook.
+  GOOGLE_ADS
+  /// Facebook / Instagram Lead Ads via a connected Meta page.
+  META
+}
+
+/// One way leads arrive automatically. Its `token` is the secret part of the intake URL.
+model Integration {
+  id             String          @id @default(uuid()) @db.Uuid
+  orgId          String          @db.Uuid
+  org            Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind           IntegrationKind
+  name           String
+  /// Random, URL-safe. Anyone with it can submit leads (never read them), so it can be rotated.
+  token          String          @unique
+  active         Boolean         @default(true)
+  defaultSource  LeadSource      @default(WEBSITE)
+  defaultProgram Program         @default(PRIVATE)
+  /// Owner for leads from this source; null = the school's assignment rule.
+  defaultOwnerId String?         @db.Uuid
+  defaultOwner   Membership?     @relation("IntegrationOwner", fields: [defaultOwnerId], references: [id], onDelete: SetNull)
+  /// Kind-specific settings (e.g. Google Ads key).
+  config         Json?
+  lastEventAt    DateTime?       @db.Timestamptz(3)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  events         IntakeEvent[]
+  metaPages      MetaPage[]
+
+  @@index([orgId])
+}
+
+enum IntakeStatus {
+  CREATED
+  /// Matched an existing lead by email/phone; added to its timeline.
+  MERGED
+  /// Same external id seen before (provider retry); ignored.
+  DUPLICATE
+  REJECTED
+  ERROR
+}
+
+/// Log of every automatic submission, so schools can see what came in and what failed.
+model IntakeEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  orgId         String       @db.Uuid
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  integrationId String       @db.Uuid
+  integration   Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  status        IntakeStatus
+  /// Provider's id for the submission (e.g. Meta leadgen_id), for idempotency.
+  externalId    String?
+  leadId        String?      @db.Uuid
+  lead          Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  /// The normalized fields we read (not the raw provider payload).
+  summary       Json?
+  error         String?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@unique([integrationId, externalId])
+  @@index([orgId, createdAt])
+  @@index([integrationId, createdAt])
+}
+
+/// A Facebook page connected for Lead Ads. One page belongs to one school.
+model MetaPage {
+  id             String       @id @default(uuid()) @db.Uuid
+  orgId          String       @db.Uuid
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  integrationId  String       @db.Uuid
+  integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  pageId         String       @unique
+  pageName       String
+  /// AES-256-GCM encrypted page access token (src/lib/crypto.ts).
+  accessTokenEnc String
+  subscribed     Boolean      @default(false)
+  lastError      String?
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([orgId])
+}
