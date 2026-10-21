@@ -53,6 +53,7 @@
   },
   "allowScripts": {
     "@embedded-postgres/darwin-arm64@18.4.0-beta.17": true,
+    "@embedded-postgres/windows-x64@18.4.0-beta.17": true,
     "@prisma/engines@7.10.1": true,
     "esbuild@0.28.2": true,
     "prisma@7.10.1": true,

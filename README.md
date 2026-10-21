@@ -5,7 +5,8 @@ The product name is a placeholder: change it in `src/lib/brand.ts` and the `app`
 
 ## Run it locally
 
-Requires Node 24+ (Homebrew's `node` works: `export PATH=/opt/homebrew/bin:$PATH`).
+Requires Node 24+ (macOS: Homebrew's `node` works, `export PATH=/opt/homebrew/bin:$PATH`; Windows: `winget install OpenJS.NodeJS.LTS`).
+Copy `.env.example` to `.env` and fill in the secrets first.
 
 ```bash
 npm install

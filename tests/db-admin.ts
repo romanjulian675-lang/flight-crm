@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import path from "node:path";
 import pg from "pg";
 
 /** Create the database if missing (connecting to the maintenance db), then apply migrations. */
@@ -16,7 +17,9 @@ export async function prepareDatabase(url: string) {
   } finally {
     await client.end();
   }
-  execFileSync("npx", ["prisma", "migrate", "deploy"], { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" });
+  // Run the Prisma CLI with node directly: `npx` is a .cmd shim on Windows and can't be spawned without a shell.
+  const prismaCli = path.resolve("node_modules/prisma/build/index.js");
+  execFileSync(process.execPath, [prismaCli, "migrate", "deploy"], { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" });
 }
 
 /** Empty every application table in a TEST database (never used on the development database). */
