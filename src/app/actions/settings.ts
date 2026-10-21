@@ -4,12 +4,15 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { formBool, formString, runAction } from "@/lib/action";
 import { createInvite, revokeInvite, updateMember } from "@/modules/members";
-import { addStage, deleteStage, moveStage, updateOrgSettings, updateStage } from "@/modules/orgs";
+import { addStage, applySuggestedPlaybooks, deleteStage, moveStage, updateOrgSettings, updatePlaybook, updateStage } from "@/modules/orgs";
+import { setAcceptsLeads } from "@/modules/assignment";
+import { getI18n } from "@/lib/i18n";
+import { fmt } from "@/lib/i18n/format";
 import type { Role, StageKind } from "@/generated/prisma/client";
 
 export async function updateOrgAction(_prev: unknown, fd: FormData) {
   return runAction(async (ctx) => {
-    await updateOrgSettings(prisma, ctx, { name: formString(fd, "name"), timeZone: formString(fd, "timeZone"), agentsSeeAll: formBool(fd, "agentsSeeAll") });
+    await updateOrgSettings(prisma, ctx, { name: formString(fd, "name"), timeZone: formString(fd, "timeZone"), agentsSeeAll: formBool(fd, "agentsSeeAll"), requireNextStep: formBool(fd, "requireNextStep") });
   });
 }
 
@@ -50,4 +53,22 @@ export async function moveStageAction(stageId: string, dir: -1 | 1) {
 
 export async function deleteStageAction(stageId: string) {
   return runAction(async (ctx) => deleteStage(prisma, ctx, stageId));
+}
+
+export async function updatePlaybookAction(stageId: string, _prev: unknown, fd: FormData) {
+  return runAction(async (ctx) => {
+    await updatePlaybook(prisma, ctx, stageId, {
+      playbook: formString(fd, "playbook"),
+      checklist: formString(fd, "checklist").split("\n"),
+    });
+  });
+}
+
+export async function applySuggestedPlaybooksAction() {
+  const { t } = await getI18n();
+  return runAction(async (ctx) => fmt(t.settings.playbooksApplied, { n: await applySuggestedPlaybooks(prisma, ctx) }));
+}
+
+export async function setAcceptsLeadsAction(membershipId: string, on: boolean) {
+  return runAction(async (ctx) => setAcceptsLeads(prisma, ctx, membershipId, on));
 }

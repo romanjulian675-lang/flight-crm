@@ -11,6 +11,10 @@ import { listAssignable } from "@/modules/members";
 import { metaConfig } from "@/modules/meta";
 import Link from "next/link";
 import { AddSource, AssignModePicker, IntegrationCard, MetaCard } from "./integration-cards";
+import { AssignmentRules } from "./assignment-rules";
+import { WhatsAppCard } from "./whatsapp-card";
+import { getAccount } from "@/modules/whatsapp";
+import { listRules } from "@/modules/assignment";
 
 export const metadata = { title: "Lead sources" };
 
@@ -19,16 +23,19 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
   if (!canManageIntegrations(ctx)) redirect("/");
   const { t, locale } = await getI18n();
   const sp = await searchParams;
-  const [integrations, events, members, org] = await Promise.all([
+  const [integrations, events, members, org, rules, people] = await Promise.all([
     listIntegrations(prisma, ctx),
     recentEvents(prisma, ctx),
     listAssignable(prisma, ctx),
     prisma.organization.findUniqueOrThrow({ where: { id: ctx.orgId }, select: { assignMode: true } }),
+    listRules(prisma, ctx),
+    prisma.membership.findMany({ where: { orgId: ctx.orgId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, acceptsLeads: true, user: { select: { name: true } } } }),
   ]);
   const appUrl = process.env.APP_URL || process.env.BETTER_AUTH_URL || "http://localhost:3200";
   const isLocal = /localhost|127\.0\.0\.1/.test(appUrl);
   const meta = integrations.find((i) => i.kind === "META");
-  const others = integrations.filter((i) => i.kind !== "META");
+  const others = integrations.filter((i) => i.kind !== "META" && i.kind !== "WHATSAPP");
+  const wa = await getAccount(prisma, ctx.orgId);
   const tones = { CREATED: "green", MERGED: "blue", DUPLICATE: "slate", REJECTED: "amber", ERROR: "red" } as const;
 
   return (
@@ -41,8 +48,12 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
       {sp.meta === "not_configured" && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{t.errors.metaNotConfigured}</p>}
       {isLocal && <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">{t.integrations.publicNote}</p>}
 
-      <Card title={t.integrations.assignTitle}>
-        <AssignModePicker mode={org.assignMode} />
+      <Card title={t.assignment.title}>
+        <AssignmentRules
+          rules={rules.map((r) => ({ id: r.id, name: r.name, active: r.active, language: r.language, program: r.program, source: r.source, memberIds: r.memberIds }))}
+          members={people.map((p) => ({ id: p.id, name: p.user.name, acceptsLeads: p.acceptsLeads }))}
+          fallback={<AssignModePicker mode={org.assignMode} />}
+        />
       </Card>
 
       <MetaCard
@@ -50,6 +61,24 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
         pages={meta?.metaPages ?? []}
         integration={meta ? { id: meta.id, name: meta.name, active: meta.active, defaultSource: meta.defaultSource, defaultProgram: meta.defaultProgram, defaultOwnerId: meta.defaultOwnerId, count: meta._count.events, lastEventAt: meta.lastEventAt?.toISOString() ?? null } : null}
         members={members.map((m) => ({ id: m.id, name: m.user.name }))}
+      />
+
+      <WhatsAppCard
+        account={
+          wa
+            ? {
+                connected: wa.integration.active && !!wa.accessTokenEnc,
+                displayPhone: wa.displayPhone,
+                verifiedName: wa.verifiedName,
+                phoneNumberId: wa.phoneNumberId,
+                wabaId: wa.wabaId,
+                webhookUrl: `${appUrl}/api/webhooks/whatsapp/${wa.integration.token}`,
+                verifyToken: wa.verifyToken,
+                autoReply: wa.autoReply ?? "",
+                lastError: wa.lastError,
+              }
+            : null
+        }
       />
 
       {others.map((i) => (

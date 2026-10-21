@@ -5,6 +5,7 @@ import { formString, runAction } from "@/lib/action";
 import { getI18n } from "@/lib/i18n";
 import { canManageIntegrations, createIntegration, deleteIntegration, rotateToken, sendTestLead, setAssignMode, updateIntegration } from "@/modules/integrations";
 import { disconnectMetaPage } from "@/modules/meta";
+import { createRule, deleteRule, moveRule, updateRule, type RuleInput } from "@/modules/assignment";
 import { ensure } from "@/modules/access";
 import type { LeadSource, Program } from "@/generated/prisma/client";
 
@@ -51,4 +52,33 @@ export async function disconnectMetaPageAction(metaPageId: string) {
     ensure(canManageIntegrations(ctx));
     await disconnectMetaPage(prisma, ctx.orgId, metaPageId);
   });
+}
+
+function ruleFromForm(fd: FormData): RuleInput {
+  return {
+    name: formString(fd, "name"),
+    active: fd.get("active") === "on",
+    language: (formString(fd, "language") || null) as "en" | null,
+    program: (formString(fd, "program") || null) as Program | null,
+    source: (formString(fd, "source") || null) as LeadSource | null,
+    memberIds: fd.getAll("memberIds").map(String),
+  };
+}
+
+export async function createRuleAction(_prev: unknown, fd: FormData) {
+  return runAction(async (ctx) => {
+    await createRule(prisma, ctx, ruleFromForm(fd));
+  });
+}
+
+export async function updateRuleAction(id: string, _prev: unknown, fd: FormData) {
+  return runAction(async (ctx) => updateRule(prisma, ctx, id, ruleFromForm(fd)));
+}
+
+export async function deleteRuleAction(id: string) {
+  return runAction(async (ctx) => deleteRule(prisma, ctx, id));
+}
+
+export async function moveRuleAction(id: string, dir: -1 | 1) {
+  return runAction(async (ctx) => moveRule(prisma, ctx, id, dir));
 }

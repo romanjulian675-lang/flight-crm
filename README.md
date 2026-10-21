@@ -17,9 +17,9 @@ npm run db:seed        # demo school with 30 leads
 
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
-Checks: `npm test` (41 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
+Checks: `npm test` (65 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
-## What's built (phases 1–2)
+## What's built (phases 1–2: CRM core)
 
 - **Accounts & tenancy**: sign-up creates a school + owner + default pipeline. Every tenant table has `orgId`; every service filters by the caller's school (tests prove a school can't read or change another's data). Users can belong to several schools (switcher in the sidebar).
 - **Roles**: Owner (everything), Manager (all leads, assign, invite agents), Agent (own leads; owner can let agents see all).
@@ -56,6 +56,23 @@ Owners/managers: sidebar → **Lead sources**. Every source creates leads automa
 
 Page tokens are stored AES-256-GCM encrypted; webhook bodies are checked against the app-secret signature.
 
+## Team (phase 4)
+
+- **Assignment rules** (Lead sources page): "if the lead speaks / wants / comes from … → rotate between these people", checked top to bottom, then the default (round-robin between agents, or unassigned). Each person has a **Receiving leads** switch (Settings → Team) to pause them (vacation, full pipeline); agents can pause themselves.
+- **Playbooks**: every stage has a script and a checklist, shown on the lead page; ticks are saved per lead. New schools get a suggested flight-school playbook (EN/ES). Owners edit them in Settings → Pipeline stages; "Fill empty stages…" adds the suggested text to schools created earlier (`npx tsx scripts/fill-playbooks.ts` does it for every school).
+- **Required next step**: logging a call/text/email/meeting on an open lead with nothing scheduled requires scheduling the follow-up in the same form (school setting, on by default). "No next step" filter on the pipeline/leads, and a dashboard card.
+- **Team stats** (`/team`): per person for 7/30/90 days — new leads, contacted, median first response (green ≤ 15 min, amber ≤ 2 h, red after), share reached within 1 h, calls (connected), touches, leads moved to a chosen milestone stage, enrolled, lost, conversion, and right-now open leads / no next step / overdue tasks. Agents see only their own row.
+
+## WhatsApp (Meta Cloud API)
+
+Lead sources → **WhatsApp Business**. Each school connects its own number (Phone number ID, WhatsApp Business Account ID, permanent system-user token, Meta app secret — stored encrypted) and pastes the webhook URL + verify token we show into its Meta app → WhatsApp → Configuration (field `messages`).
+
+- **Inbound**: a new number becomes a lead (source WhatsApp, language guessed from the first message, assignment rules, "contact now" task, optional instant auto-reply). Later messages attach to the lead. A reply counts as contact (speed-to-lead).
+- **Lead page chat**: send/receive with sent / delivered / read ticks. Free text only within 24 h of the lead's last message (Meta rule); after that, approved templates with their {{1}}… values (first one pre-filled with the lead's first name).
+- **Inbox** (`/inbox`, sidebar "WhatsApp" with unread count): every conversation, newest first.
+- Webhook: `GET/POST /api/webhooks/whatsapp/<token>` — signature checked with that school's app secret; retries are idempotent (message ids are unique).
+- Cost: Meta bills WhatsApp conversations/template messages per its current pricing; replies within the 24 h window to someone who wrote first are the cheap/free case. Check Meta's pricing page for your country.
+
 ## Layout
 
 - `prisma/schema.prisma` — data model (comments explain conventions). Migrations in `prisma/migrations`.
@@ -68,7 +85,7 @@ Page tokens are stored AES-256-GCM encrypted; webhook bodies are checked against
 ## Next phases
 
 3. ~~Lead intake~~ — done (see Lead sources). Still to add: TikTok Lead Gen native, Instagram/Messenger DMs, inbound calls (Twilio).
-4. Team: assignment by language/program (round-robin is done), playbooks per stage, per-agent stats.
+4. ~~Team~~ — done (see Team).
 5. Messaging: email/SMS templates + automated follow-ups, consent tracking (TCPA / CAN-SPAM).
 6. Selling it: Stripe plans, landing page, onboarding, terms & privacy.
 7. Integrations: push enrolled students to Flight Deck.

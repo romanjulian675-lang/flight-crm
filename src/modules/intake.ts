@@ -1,6 +1,7 @@
 import type { Db, Tx } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import type { Integration, IntakeStatus, LeadSource, Prisma, Program } from "@/generated/prisma/client";
+import { pickOwner } from "@/modules/assignment";
 import { insertLead, leadInput, normalizePhone } from "@/modules/leads";
 
 /**
@@ -163,24 +164,6 @@ const TASK_TITLE = {
   es: { new: "Contactar nuevo prospecto", again: "El prospecto volvió a escribir — dar seguimiento" },
 };
 
-/**
- * Next owner under the school's rule. Rotates through active agents (managers/owners when there are
- * no agents). The org row is locked so two leads arriving at once don't go to the same person.
- */
-export async function nextOwner(tx: Tx, orgId: string): Promise<string | null> {
-  const [org] = await tx.$queryRaw<{ assignMode: string; rrCursorId: string | null }[]>`
-    SELECT "assignMode", "rrCursorId" FROM "Organization" WHERE id = ${orgId}::uuid FOR UPDATE`;
-  if (!org || org.assignMode !== "ROUND_ROBIN") return null;
-  const members = await tx.membership.findMany({ where: { orgId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, role: true } });
-  const agents = members.filter((m) => m.role === "AGENT");
-  const pool = agents.length ? agents : members;
-  if (!pool.length) return null;
-  const i = pool.findIndex((m) => m.id === org.rrCursorId);
-  const next = pool[(i + 1) % pool.length];
-  await tx.organization.update({ where: { id: orgId }, data: { rrCursorId: next.id } });
-  return next.id;
-}
-
 export type IngestOptions = {
   /** Provider's id for this submission; a repeat is ignored (providers retry). */
   externalId?: string | null;
@@ -278,7 +261,7 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
         const m = await tx.membership.findFirst({ where: { id: integration.defaultOwnerId, orgId: integration.orgId, active: true }, select: { id: true } });
         ownerId = m?.id ?? null;
       }
-      ownerId ??= await nextOwner(tx, integration.orgId);
+      ownerId ??= await pickOwner(tx, integration.orgId, { language: data.language, program: data.program, source: data.source });
       const lead = await insertLead(tx, integration.orgId, data, { ownerId, actorId: null, note, createdMeta: { source: data.source, via } });
       if (ownerId) await tx.activity.create({ data: { orgId: integration.orgId, leadId: lead.id, type: "ASSIGNED", meta: { from: null, to: ownerId, auto: true } } });
       await addContactTask(tx, integration.orgId, lead.id, ownerId, titles.new, now);

@@ -156,10 +156,12 @@ describe("leads", () => {
   it("only real conversations count as contact", async () => {
     const s = await makeSchool();
     const lead = await createLead(prisma, s.agent, { firstName: "E" });
-    await logActivity(prisma, s.agent, lead.id, { type: "CALL", outcome: "VOICEMAIL" });
+    await logActivity(prisma, s.agent, lead.id, { type: "CALL", outcome: "VOICEMAIL", followUp: { title: "Try again", date: "2026-10-20" } });
     expect((await getLead(prisma, s.agent, lead.id)).lastContactAt).toBeNull();
     await logActivity(prisma, s.agent, lead.id, { type: "CALL", outcome: "CONNECTED", body: "Wants PPL, has medical" });
-    expect((await getLead(prisma, s.agent, lead.id)).lastContactAt).not.toBeNull();
+    const after = await getLead(prisma, s.agent, lead.id);
+    expect(after.lastContactAt).not.toBeNull();
+    expect(after.firstContactAt).toEqual(after.lastContactAt);
   });
 
   it("logs which fields changed on edit", async () => {

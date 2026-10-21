@@ -13,7 +13,10 @@ import { listStages } from "@/modules/orgs";
 import { ActivityComposer } from "./activity-composer";
 import { DeleteLeadButton, LeadControls } from "./lead-controls";
 import { LeadDetailsForm } from "./lead-details-form";
+import { PlaybookCard } from "./playbook-card";
 import { TaskPanel } from "./task-panel";
+import { WhatsAppChat } from "./whatsapp-chat";
+import { getAccount, getConversation } from "@/modules/whatsapp";
 
 export const metadata = { title: "Lead" };
 
@@ -21,7 +24,17 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
   const ctx = await requirePageAccess();
   const { t, locale } = await getI18n();
-  const [lead, stages, members] = await Promise.all([getLead(prisma, ctx, id), listStages(prisma, ctx), listMembers(prisma, ctx)]);
+  const [lead, stages, members, org] = await Promise.all([
+    getLead(prisma, ctx, id),
+    listStages(prisma, ctx),
+    listMembers(prisma, ctx),
+    prisma.organization.findUniqueOrThrow({ where: { id: ctx.orgId }, select: { requireNextStep: true } }),
+  ]);
+  const wa = await getAccount(prisma, ctx.orgId);
+  const waLive = !!wa && wa.integration.active && !!wa.accessTokenEnc && !!lead.phone;
+  const chat = waLive ? await getConversation(prisma, ctx, lead.id) : null;
+  const nextRequired = org.requireNextStep && lead.stage.kind === "OPEN" && !lead.tasks.some((x) => !x.completedAt);
+  const checklistDone = ((lead.checklist ?? {}) as Record<string, string[]>)[lead.stageId] ?? [];
   const memberName = new Map(members.map((m) => [m.id, m.user.name]));
   const activeMembers = members.filter((m) => m.active).map((m) => ({ id: m.id, name: m.user.name }));
   const name = fullName(lead);
@@ -59,7 +72,11 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             <>
               <ContactLink href={`tel:${tel}`} icon={<Phone size={15} />} label={t.lead.call} />
               <ContactLink href={`sms:${tel}`} icon={<MessageSquare size={15} />} label={t.lead.text} />
-              <ContactLink href={`https://wa.me/${lead.phone}`} icon={<MessageCircle size={15} />} label={t.lead.whatsapp} external />
+              {waLive ? (
+                <ContactLink href="#whatsapp" icon={<MessageCircle size={15} />} label={t.lead.whatsapp} />
+              ) : (
+                <ContactLink href={`https://wa.me/${lead.phone}`} icon={<MessageCircle size={15} />} label={t.lead.whatsapp} external />
+              )}
             </>
           )}
           {lead.email && <ContactLink href={`mailto:${lead.email}`} icon={<Mail size={15} />} label={t.lead.mail} />}
@@ -76,9 +93,29 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         canAssign={permissions.assignLeads(ctx)}
       />
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
-          <ActivityComposer leadId={lead.id} />
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
+          {chat && (
+            <WhatsAppChat
+              leadId={lead.id}
+              firstName={lead.firstName}
+              myName={ctx.name}
+              lastInboundAt={chat.lastInboundAt?.toISOString() ?? null}
+              hasUnread={chat.messages.some((m) => m.direction === "IN" && !m.readAt)}
+              messages={chat.messages.map((m) => ({
+                id: m.id,
+                direction: m.direction,
+                body: m.body,
+                type: m.type,
+                templateName: m.templateName,
+                status: m.status,
+                error: m.error,
+                sender: m.sentBy?.user.name ?? null,
+                createdAt: m.createdAt.toISOString(),
+              }))}
+            />
+          )}
+          <ActivityComposer leadId={lead.id} nextRequired={nextRequired} />
           <Card title={t.lead.timeline_title}>
             {lead.activities.length === 0 ? (
               <Empty>{t.lead.noActivity}</Empty>
@@ -104,6 +141,11 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         </div>
 
         <div className="space-y-5">
+          <PlaybookCard
+            leadId={lead.id}
+            stage={{ id: lead.stage.id, name: lead.stage.name, playbook: lead.stage.playbook, checklist: lead.stage.checklist }}
+            done={checklistDone}
+          />
           <TaskPanel
             leadId={lead.id}
             myId={ctx.membershipId}

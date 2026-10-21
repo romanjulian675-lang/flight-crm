@@ -96,30 +96,35 @@ enum Plan {
 
 /// One flight school (a paying customer of the product).
 model Organization {
-  id           String          @id @default(uuid()) @db.Uuid
-  name         String
+  id               String            @id @default(uuid()) @db.Uuid
+  name             String
   /// IANA zone used for "today", due dates and reports.
-  timeZone     String          @default("America/New_York")
+  timeZone         String            @default("America/New_York")
   /// "en" | "es": language for text the system writes (automatic task titles, future emails).
-  locale       String          @default("en")
-  plan         Plan            @default(TRIAL)
+  locale           String            @default("en")
+  plan             Plan              @default(TRIAL)
   /// When false, agents only see leads assigned to them.
-  agentsSeeAll Boolean         @default(false)
+  agentsSeeAll     Boolean           @default(false)
   /// How leads that arrive automatically (forms, ads, webhooks) get an owner.
-  assignMode   AssignMode      @default(ROUND_ROBIN)
+  assignMode       AssignMode        @default(ROUND_ROBIN)
   /// Membership that received the last round-robin lead.
-  rrCursorId   String?         @db.Uuid
-  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
-  memberships  Membership[]
-  invites      Invite[]
-  stages       PipelineStage[]
-  leads        Lead[]
-  activities   Activity[]
-  tasks        Task[]
-  integrations Integration[]
-  intakeEvents IntakeEvent[]
-  metaPages    MetaPage[]
+  rrCursorId       String?           @db.Uuid
+  /// Logging a call/text/email/meeting on an open lead requires a scheduled next step.
+  requireNextStep  Boolean           @default(true)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  memberships      Membership[]
+  invites          Invite[]
+  stages           PipelineStage[]
+  leads            Lead[]
+  activities       Activity[]
+  tasks            Task[]
+  integrations     Integration[]
+  intakeEvents     IntakeEvent[]
+  metaPages        MetaPage[]
+  assignmentRules  AssignmentRule[]
+  whatsappAccounts WhatsAppAccount[]
+  whatsappMessages WhatsAppMessage[]
 }
 
 enum AssignMode {
@@ -136,23 +141,26 @@ enum Role {
 }
 
 model Membership {
-  id        String       @id @default(uuid()) @db.Uuid
-  orgId     String       @db.Uuid
-  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  userId    String       @db.Uuid
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role         @default(AGENT)
+  id           String       @id @default(uuid()) @db.Uuid
+  orgId        String       @db.Uuid
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId       String       @db.Uuid
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @default(AGENT)
   /// Deactivated members keep their history but cannot sign in to this school.
-  active    Boolean      @default(true)
-  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  active       Boolean      @default(true)
+  /// Off = skipped by automatic assignment (vacation, sick, full pipeline). They keep their leads.
+  acceptsLeads Boolean      @default(true)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
 
-  defaultFor     Integration[] @relation("IntegrationOwner")
-  ownedLeads     Lead[]        @relation("LeadOwner")
+  defaultFor     Integration[]     @relation("IntegrationOwner")
+  ownedLeads     Lead[]            @relation("LeadOwner")
   activities     Activity[]
-  assignedTasks  Task[]        @relation("TaskAssignee")
-  createdTasks   Task[]        @relation("TaskCreator")
-  completedTasks Task[]        @relation("TaskCompleter")
+  assignedTasks  Task[]            @relation("TaskAssignee")
+  createdTasks   Task[]            @relation("TaskCreator")
+  completedTasks Task[]            @relation("TaskCompleter")
   sentInvites    Invite[]
+  sentWhatsApp   WhatsAppMessage[]
 
   @@unique([orgId, userId])
   @@index([userId])
@@ -196,6 +204,10 @@ model PipelineStage {
   position  Int
   kind      StageKind    @default(OPEN)
   color     String       @default("slate")
+  /// What to say/do at this stage (shown on the lead page to train agents).
+  playbook  String?
+  /// Steps to tick off for each lead in this stage.
+  checklist String[]     @default([])
   createdAt DateTime     @default(now()) @db.Timestamptz(3)
   leads     Lead[]
 
@@ -210,6 +222,7 @@ enum LeadSource {
   TIKTOK
   YOUTUBE
   GOOGLE
+  WHATSAPP
   WALK_IN
   REFERRAL
   OTHER
@@ -243,42 +256,49 @@ enum Funding {
 }
 
 model Lead {
-  id              String        @id @default(uuid()) @db.Uuid
-  orgId           String        @db.Uuid
-  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  firstName       String
-  lastName        String        @default("")
-  email           String?
+  id               String            @id @default(uuid()) @db.Uuid
+  orgId            String            @db.Uuid
+  org              Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  firstName        String
+  lastName         String            @default("")
+  email            String?
   /// Digits only (with country code when known), used for duplicate detection.
-  phone           String?
+  phone            String?
   /// "en" | "es" — the language the lead prefers to be contacted in.
-  language        String        @default("en")
-  source          LeadSource    @default(OTHER)
+  language         String            @default("en")
+  source           LeadSource        @default(OTHER)
   /// Free text: which form, which ad, who referred them.
-  sourceDetail    String?
-  utmSource       String?
-  utmMedium       String?
-  utmCampaign     String?
-  program         Program       @default(PRIVATE)
-  medical         MedicalStatus @default(UNKNOWN)
-  funding         Funding       @default(UNKNOWN)
+  sourceDetail     String?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  program          Program           @default(PRIVATE)
+  medical          MedicalStatus     @default(UNKNOWN)
+  funding          Funding           @default(UNKNOWN)
   /// When they want to start, in their words ("next month", "after graduation").
-  timeline        String?
-  isInternational Boolean       @default(false)
-  stageId         String        @db.Uuid
-  stage           PipelineStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  timeline         String?
+  isInternational  Boolean           @default(false)
+  stageId          String            @db.Uuid
+  stage            PipelineStage     @relation(fields: [stageId], references: [id], onDelete: Restrict)
   /// Order inside the stage column (fractional so a move only rewrites one row).
-  position        Float         @default(0)
-  ownerId         String?       @db.Uuid
-  owner           Membership?   @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  lostReason      String?
-  lastContactAt   DateTime?     @db.Timestamptz(3)
-  stageChangedAt  DateTime      @default(now()) @db.Timestamptz(3)
-  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
-  activities      Activity[]
-  tasks           Task[]
-  intakeEvents    IntakeEvent[]
+  position         Float             @default(0)
+  ownerId          String?           @db.Uuid
+  owner            Membership?       @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  lostReason       String?
+  lastContactAt    DateTime?         @db.Timestamptz(3)
+  /// First real two-way contact; speed-to-lead = firstContactAt - createdAt.
+  firstContactAt   DateTime?         @db.Timestamptz(3)
+  /// Ticked playbook checklist items: { [stageId]: string[] }.
+  checklist        Json?
+  /// Last WhatsApp message from the lead; free-form replies are allowed for 24 h after it.
+  waLastInboundAt  DateTime?         @db.Timestamptz(3)
+  stageChangedAt   DateTime          @default(now()) @db.Timestamptz(3)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  activities       Activity[]
+  tasks            Task[]
+  intakeEvents     IntakeEvent[]
+  whatsappMessages WhatsAppMessage[]
 
   @@index([orgId, stageId, position])
   @@index([orgId, ownerId])
@@ -356,29 +376,32 @@ enum IntegrationKind {
   GOOGLE_ADS
   /// Facebook / Instagram Lead Ads via a connected Meta page.
   META
+  /// WhatsApp Business (Cloud API): inbound chats become leads, two-way messaging.
+  WHATSAPP
 }
 
 /// One way leads arrive automatically. Its `token` is the secret part of the intake URL.
 model Integration {
-  id             String          @id @default(uuid()) @db.Uuid
-  orgId          String          @db.Uuid
-  org            Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id             String           @id @default(uuid()) @db.Uuid
+  orgId          String           @db.Uuid
+  org            Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   kind           IntegrationKind
   name           String
   /// Random, URL-safe. Anyone with it can submit leads (never read them), so it can be rotated.
-  token          String          @unique
-  active         Boolean         @default(true)
-  defaultSource  LeadSource      @default(WEBSITE)
-  defaultProgram Program         @default(PRIVATE)
+  token          String           @unique
+  active         Boolean          @default(true)
+  defaultSource  LeadSource       @default(WEBSITE)
+  defaultProgram Program          @default(PRIVATE)
   /// Owner for leads from this source; null = the school's assignment rule.
-  defaultOwnerId String?         @db.Uuid
-  defaultOwner   Membership?     @relation("IntegrationOwner", fields: [defaultOwnerId], references: [id], onDelete: SetNull)
+  defaultOwnerId String?          @db.Uuid
+  defaultOwner   Membership?      @relation("IntegrationOwner", fields: [defaultOwnerId], references: [id], onDelete: SetNull)
   /// Kind-specific settings (e.g. Google Ads key).
   config         Json?
-  lastEventAt    DateTime?       @db.Timestamptz(3)
-  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  lastEventAt    DateTime?        @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
   events         IntakeEvent[]
   metaPages      MetaPage[]
+  whatsapp       WhatsAppAccount?
 
   @@index([orgId])
 }
@@ -432,4 +455,101 @@ model MetaPage {
   updatedAt      DateTime     @updatedAt @db.Timestamptz(3)
 
   @@index([orgId])
+}
+
+/// "Leads matching X go to these people." Checked in order; the first match wins, then the school's
+/// default (round-robin or unassigned) applies.
+model AssignmentRule {
+  id        String       @id @default(uuid()) @db.Uuid
+  orgId     String       @db.Uuid
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int
+  active    Boolean      @default(true)
+  /// Conditions; null = any.
+  language  String?
+  program   Program?
+  source    LeadSource?
+  /// Memberships to rotate between.
+  memberIds String[]     @db.Uuid
+  /// Membership that received this rule's last lead.
+  cursorId  String?      @db.Uuid
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([orgId, position])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp (Meta Cloud API)
+// ---------------------------------------------------------------------------
+
+/// A school's WhatsApp Business phone number. Its webhook URL is /api/webhooks/whatsapp/<integration.token>.
+model WhatsAppAccount {
+  id             String            @id @default(uuid()) @db.Uuid
+  orgId          String            @db.Uuid
+  org            Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  integrationId  String            @unique @db.Uuid
+  integration    Integration       @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  /// Meta's id for the phone number (not the number itself). One number belongs to one school.
+  phoneNumberId  String            @unique
+  wabaId         String
+  displayPhone   String?
+  verifiedName   String?
+  /// AES-256-GCM encrypted (src/lib/crypto.ts): permanent system-user token, and the Meta app secret
+  /// used to verify webhook signatures.
+  accessTokenEnc String
+  appSecretEnc   String
+  /// Pasted into Meta's webhook settings; Meta echoes it back during verification.
+  verifyToken    String
+  /// Sent automatically to someone who messages the school for the first time.
+  autoReply      String?
+  lastError      String?
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
+  messages       WhatsAppMessage[]
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+enum MessageStatus {
+  RECEIVED
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model WhatsAppMessage {
+  id           String           @id @default(uuid()) @db.Uuid
+  /// Arrival order. WhatsApp timestamps have one-second precision, so this breaks ties.
+  seq          Int              @default(autoincrement())
+  orgId        String           @db.Uuid
+  org          Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  accountId    String           @db.Uuid
+  account      WhatsAppAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  leadId       String           @db.Uuid
+  lead         Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  direction    MessageDirection
+  /// Meta's message id (wamid…); unique so webhook retries are ignored.
+  waMessageId  String?          @unique
+  /// text, template, image, audio, video, document, location, sticker, …
+  type         String
+  body         String?
+  templateName String?
+  status       MessageStatus
+  error        String?
+  /// Who sent it (outbound); null for automatic replies.
+  sentById     String?          @db.Uuid
+  sentBy       Membership?      @relation(fields: [sentById], references: [id], onDelete: SetNull)
+  /// Inbound: when someone in the school opened the conversation.
+  readAt       DateTime?        @db.Timestamptz(3)
+  statusAt     DateTime?        @db.Timestamptz(3)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([orgId, leadId, createdAt])
+  @@index([orgId, direction, readAt])
 }

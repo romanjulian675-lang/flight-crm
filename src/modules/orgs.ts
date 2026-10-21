@@ -3,6 +3,7 @@ import type { Db } from "@/lib/db";
 import { conflict, invalid, notFound } from "@/lib/errors";
 import type { StageKind } from "@/generated/prisma/client";
 import { ensure, permissions, type AccessContext } from "@/modules/access";
+import { SUGGESTED_PLAYBOOKS } from "@/modules/playbooks";
 
 /** Default pipeline for a new school, in the owner's language. */
 const DEFAULT_STAGES: Record<"en" | "es", { name: string; kind: StageKind; color: string }[]> = {
@@ -50,7 +51,7 @@ export async function createOrganization(db: Db, userId: string, input: z.input<
     const org = await tx.organization.create({ data: { name: data.name, timeZone: data.timeZone, locale: data.locale } });
     await tx.membership.create({ data: { orgId: org.id, userId, role: "OWNER" } });
     await tx.pipelineStage.createMany({
-      data: DEFAULT_STAGES[data.locale].map((s, i) => ({ orgId: org.id, position: i, ...s })),
+      data: DEFAULT_STAGES[data.locale].map((s, i) => ({ orgId: org.id, position: i, ...s, ...SUGGESTED_PLAYBOOKS[data.locale][i] })),
     });
     return org;
   });
@@ -60,6 +61,7 @@ export const orgSettingsInput = z.object({
   name: z.string().trim().min(2, "orgNameRequired").max(120),
   timeZone: timeZoneSchema,
   agentsSeeAll: z.boolean(),
+  requireNextStep: z.boolean(),
 });
 
 export async function updateOrgSettings(db: Db, ctx: AccessContext, input: z.input<typeof orgSettingsInput>) {
@@ -123,4 +125,44 @@ export async function deleteStage(db: Db, ctx: AccessContext, stageId: string) {
 async function assertKindRemains(db: Db, orgId: string, kind: StageKind, excludingId: string) {
   const others = await db.pipelineStage.count({ where: { orgId, kind, id: { not: excludingId } } });
   if (others === 0) throw invalid("stageKindRequired");
+}
+
+// ---------------------------------------------------------------------------
+// Playbooks
+// ---------------------------------------------------------------------------
+
+const playbookInput = z.object({
+  playbook: z.string().max(10_000).transform((v) => v.trim() || null),
+  checklist: z
+    .array(z.string().trim().max(200))
+    .max(20)
+    .transform((items) => [...new Set(items.filter(Boolean))]),
+});
+
+export async function updatePlaybook(db: Db, ctx: AccessContext, stageId: string, input: z.input<typeof playbookInput>) {
+  ensure(permissions.manageOrg(ctx));
+  const data = playbookInput.parse(input);
+  const res = await db.pipelineStage.updateMany({ where: { id: stageId, orgId: ctx.orgId }, data });
+  if (res.count === 0) throw notFound();
+}
+
+/**
+ * Fill stages that have no playbook yet with the suggested text, matching default stage names in
+ * either language. Returns how many stages were filled. Never overwrites a school's own playbook.
+ */
+export async function applySuggestedPlaybooks(db: Db, ctx: AccessContext) {
+  ensure(permissions.manageOrg(ctx));
+  const stages = await listStages(db, ctx);
+  let filled = 0;
+  for (const stage of stages) {
+    if (stage.playbook || stage.checklist.length) continue;
+    for (const locale of ["en", "es"] as const) {
+      const i = DEFAULT_STAGES[locale].findIndex((d) => d.name.toLowerCase() === stage.name.trim().toLowerCase());
+      if (i < 0) continue;
+      await db.pipelineStage.update({ where: { id: stage.id }, data: SUGGESTED_PLAYBOOKS[locale][i] });
+      filled++;
+      break;
+    }
+  }
+  return filled;
 }

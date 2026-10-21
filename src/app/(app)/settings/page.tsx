@@ -28,7 +28,7 @@ export default async function SettingsPage() {
 
       {canOrg && (
         <Card title={t.settings.school}>
-          <OrgForm org={{ name: org.name, timeZone: org.timeZone, agentsSeeAll: org.agentsSeeAll }} />
+          <OrgForm org={{ name: org.name, timeZone: org.timeZone, agentsSeeAll: org.agentsSeeAll, requireNextStep: org.requireNextStep }} />
         </Card>
       )}
 
@@ -38,7 +38,8 @@ export default async function SettingsPage() {
           {members.map((m) => (
             <MemberRow
               key={m.id}
-              member={{ id: m.id, name: m.user.name, email: m.user.email, role: m.role, active: m.active }}
+              member={{ id: m.id, name: m.user.name, email: m.user.email, role: m.role, active: m.active, acceptsLeads: m.acceptsLeads }}
+              canToggleLeads={m.id === ctx.membershipId || ctx.role === "OWNER" || (canTeam && m.role === "AGENT")}
               isMe={m.id === ctx.membershipId}
               canEdit={canTeam && m.id !== ctx.membershipId && (ctx.role === "OWNER" || m.role === "AGENT")}
               grantable={ctx.role === "OWNER" ? ["OWNER", "MANAGER", "AGENT"] : ["AGENT"]}
@@ -65,7 +66,7 @@ export default async function SettingsPage() {
 
       <Card title={t.settings.pipeline}>
         {canOrg && <p className="mb-3 text-xs text-muted">{t.settings.pipelineHelp}</p>}
-        <StageEditor stages={stages.map((s) => ({ id: s.id, name: s.name, kind: s.kind, color: s.color }))} canEdit={canOrg} />
+        <StageEditor stages={stages.map((s) => ({ id: s.id, name: s.name, kind: s.kind, color: s.color, playbook: s.playbook ?? "", checklist: s.checklist }))} canEdit={canOrg} />
       </Card>
     </div>
   );

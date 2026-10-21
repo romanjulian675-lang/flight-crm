@@ -1,6 +1,6 @@
 import { AutoRefresh } from "@/components/auto-refresh";
 import Link from "next/link";
-import { AlertCircle, CalendarClock, GraduationCap, Inbox, Users } from "lucide-react";
+import { AlertCircle, CalendarClock, CalendarX, GraduationCap, Inbox, Users } from "lucide-react";
 import { Avatar, Card, Empty, PageHeader, stageStyle } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { formatPhone, fullName, shortAge } from "@/lib/format";
@@ -25,6 +25,7 @@ export default async function DashboardPage() {
     { label: t.dashboard.wonThisMonth, value: d.wonThisMonth, icon: GraduationCap, href: "/pipeline", tone: "text-emerald-600 bg-emerald-100" },
     { label: t.dashboard.myToday, value: d.dueToday, icon: CalendarClock, href: "/tasks", tone: "text-violet-600 bg-violet-100" },
     { label: t.dashboard.myOverdue, value: d.overdue, icon: AlertCircle, href: "/tasks", tone: d.overdue ? "text-red-600 bg-red-100" : "text-slate-500 bg-slate-100" },
+    { label: t.dashboard.noNextStep, value: d.noNextStep, icon: CalendarX, href: "/pipeline?noNext=1", tone: d.noNextStep ? "text-amber-700 bg-amber-100" : "text-slate-500 bg-slate-100" },
   ];
 
   return (
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
       <AutoRefresh />
       <PageHeader title={fmt(t.dashboard.hello, { name: ctx.name.split(" ")[0] })} subtitle={ctx.orgName} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {stats.map(({ label, value, icon: Icon, href, tone }) => (
           <Link key={label} href={href} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow">
             <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${tone}`}>

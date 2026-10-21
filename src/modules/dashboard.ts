@@ -1,6 +1,7 @@
 import type { Db } from "@/lib/db";
 import { startOfDayOffset, todayBounds } from "@/lib/dates";
 import { leadScope, type AccessContext } from "@/modules/access";
+import { NEEDS_NEXT_STEP } from "@/modules/leads";
 
 /** Hours after which a lead nobody has contacted is flagged. Speed-to-lead is the #1 conversion lever. */
 export const UNCONTACTED_HOURS = 24;
@@ -12,7 +13,7 @@ export async function getDashboard(db: Db, ctx: AccessContext, now = new Date())
   const monthAgo = startOfDayOffset(now, ctx.timeZone, -29);
   const staleBefore = new Date(now.getTime() - UNCONTACTED_HOURS * 3_600_000);
 
-  const [stages, byStage, newThisWeek, wonThisMonth, bySource, uncontacted, overdue, dueToday] = await Promise.all([
+  const [stages, byStage, newThisWeek, wonThisMonth, bySource, uncontacted, overdue, dueToday, noNextStep] = await Promise.all([
     db.pipelineStage.findMany({ where: { orgId: ctx.orgId }, orderBy: { position: "asc" } }),
     db.lead.groupBy({ by: ["stageId"], where: scope, _count: { _all: true } }),
     db.lead.count({ where: { ...scope, createdAt: { gte: weekAgo } } }),
@@ -26,6 +27,7 @@ export async function getDashboard(db: Db, ctx: AccessContext, now = new Date())
     }),
     db.task.count({ where: { orgId: ctx.orgId, assigneeId: ctx.membershipId, completedAt: null, dueAt: { lt: todayStart } } }),
     db.task.count({ where: { orgId: ctx.orgId, assigneeId: ctx.membershipId, completedAt: null, dueAt: { gte: todayStart, lt: todayEnd } } }),
+    db.lead.count({ where: { ...scope, ...NEEDS_NEXT_STEP } }),
   ]);
 
   const counts = new Map(byStage.map((r) => [r.stageId, r._count._all]));
@@ -41,5 +43,6 @@ export async function getDashboard(db: Db, ctx: AccessContext, now = new Date())
     funnel,
     bySource: bySource.map((r) => ({ source: r.source, count: r._count._all })).sort((a, b) => b.count - a.count),
     uncontacted,
+    noNextStep,
   };
 }

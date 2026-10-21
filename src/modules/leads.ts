@@ -3,6 +3,7 @@ import type { Db, Tx } from "@/lib/db";
 import { invalid, notFound } from "@/lib/errors";
 import type { ActivityType, Prisma } from "@/generated/prisma/client";
 import { CALL_OUTCOME_VALUES as CALL_OUTCOMES, FUNDING_VALUES as FUNDING, MEDICAL_VALUES as MEDICAL, PROGRAM_VALUES as PROGRAMS, SOURCE_VALUES as SOURCES } from "@/lib/enums";
+import { zonedToUtc } from "@/lib/dates";
 import { ensure, leadScope, permissions, type AccessContext } from "@/modules/access";
 
 /** Digits only; a bare 10-digit number is assumed to be US/Canada (+1). */
@@ -189,7 +190,7 @@ export async function moveLead(db: Db, ctx: AccessContext, leadId: string, stage
       data: { stageId, position, ...(stageChanged ? { stageChangedAt: new Date(), lostReason: reason } : {}) },
     });
     if (stageChanged) {
-      await addActivity(tx, ctx, ctx.orgId, leadId, "STAGE_CHANGE", reason, { from: lead.stage.name, to: stage.name, toKind: stage.kind });
+      await addActivity(tx, ctx, ctx.orgId, leadId, "STAGE_CHANGE", reason, { from: lead.stage.name, to: stage.name, fromId: lead.stageId, toId: stage.id, toKind: stage.kind });
     }
   });
 }
@@ -204,24 +205,65 @@ export async function deleteLead(db: Db, ctx: AccessContext, leadId: string) {
 // Timeline
 // ---------------------------------------------------------------------------
 
+const followUpInput = z.object({
+  title: z.string().trim().min(1, "taskTitleRequired").max(200),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "dateInvalid"),
+  time: z.string().regex(/^\d{2}:\d{2}$/).default("09:00"),
+});
+
 export const logInput = z.object({
   type: z.enum(["NOTE", "CALL", "EMAIL", "SMS", "MEETING"]),
   body: z.string().trim().max(5000).default(""),
   outcome: z.enum(CALL_OUTCOMES).optional().nullable(),
   direction: z.enum(["OUT", "IN"]).default("OUT"),
+  /** Schedule the next step in the same save (required for open leads when the school says so). */
+  followUp: followUpInput.optional().nullable(),
 });
 
-export async function logActivity(db: Db, ctx: AccessContext, leadId: string, input: z.input<typeof logInput>) {
-  await getScopedLead(db, ctx, leadId);
+export async function logActivity(db: Db, ctx: AccessContext, leadId: string, input: z.input<typeof logInput>, now = new Date()) {
+  const lead = await getScopedLead(db, ctx, leadId);
   const data = logInput.parse(input);
   if (data.type === "NOTE" && !data.body) throw invalid("noteRequired");
   const meta = data.type === "NOTE" ? undefined : { direction: data.direction, ...(data.type === "CALL" && data.outcome ? { outcome: data.outcome } : {}) };
   // Only a real two-way touch counts as "contacted" (a voicemail or no-answer does not).
   const touched = data.type !== "NOTE" && !(data.type === "CALL" && data.outcome && data.outcome !== "CONNECTED");
-  await db.$transaction([
-    db.activity.create({ data: { orgId: ctx.orgId, leadId, actorId: ctx.membershipId, type: data.type, body: data.body || null, meta } }),
-    ...(touched ? [db.lead.update({ where: { id: leadId }, data: { lastContactAt: new Date() } })] : []),
-  ]);
+
+  // Every touch on an open lead must leave a next step behind, so no lead silently goes cold.
+  if (data.type !== "NOTE" && lead.stage.kind === "OPEN" && !data.followUp) {
+    const org = await db.organization.findUniqueOrThrow({ where: { id: ctx.orgId }, select: { requireNextStep: true } });
+    const open = org.requireNextStep && (await db.task.count({ where: { orgId: ctx.orgId, leadId, completedAt: null } }));
+    if (org.requireNextStep && !open) throw invalid("nextStepRequired");
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.activity.create({ data: { orgId: ctx.orgId, leadId, actorId: ctx.membershipId, type: data.type, body: data.body || null, meta } });
+    if (touched) await tx.lead.update({ where: { id: leadId }, data: { lastContactAt: now, ...(lead.firstContactAt ? {} : { firstContactAt: now }) } });
+    if (data.followUp) {
+      await tx.task.create({
+        data: {
+          orgId: ctx.orgId,
+          leadId,
+          title: data.followUp.title,
+          dueAt: zonedToUtc(data.followUp.date, data.followUp.time, ctx.timeZone),
+          assigneeId: lead.ownerId && lead.ownerId !== ctx.membershipId && permissions.assignLeads(ctx) ? lead.ownerId : ctx.membershipId,
+          createdById: ctx.membershipId,
+        },
+      });
+    }
+  });
+}
+
+/** Tick or untick a playbook checklist item for the lead's stage. */
+export async function setChecklistItem(db: Db, ctx: AccessContext, leadId: string, stageId: string, item: string, checked: boolean) {
+  const lead = await getScopedLead(db, ctx, leadId);
+  const stage = await db.pipelineStage.findFirst({ where: { id: stageId, orgId: ctx.orgId }, select: { checklist: true } });
+  if (!stage || !stage.checklist.includes(item)) throw notFound();
+  const all = { ...((lead.checklist ?? {}) as Record<string, string[]>) };
+  const done = new Set(all[stageId] ?? []);
+  if (checked) done.add(item);
+  else done.delete(item);
+  all[stageId] = [...done];
+  await db.lead.update({ where: { id: leadId }, data: { checklist: all } });
 }
 
 // ---------------------------------------------------------------------------
@@ -233,14 +275,19 @@ export const leadFilters = z.object({
   owner: z.string().optional(), // membership id, "me" or "none"
   source: z.enum(SOURCES).optional(),
   program: z.enum(PROGRAMS).optional(),
+  /** Only open leads with no scheduled follow-up. */
+  noNext: z.literal("1").optional(),
 });
 export type LeadFilters = z.infer<typeof leadFilters>;
 
 export function parseFilters(params: Record<string, string | string[] | undefined>): LeadFilters {
   const pick = (k: string) => (typeof params[k] === "string" && params[k] ? (params[k] as string) : undefined);
-  const res = leadFilters.safeParse({ q: pick("q"), owner: pick("owner"), source: pick("source"), program: pick("program") });
+  const res = leadFilters.safeParse({ q: pick("q"), owner: pick("owner"), source: pick("source"), program: pick("program"), noNext: pick("noNext") });
   return res.success ? res.data : {};
 }
+
+/** Open leads with nothing scheduled: the ones about to go cold. */
+export const NEEDS_NEXT_STEP = { stage: { kind: "OPEN" }, tasks: { none: { completedAt: null } } } satisfies Prisma.LeadWhereInput;
 
 function filterWhere(ctx: AccessContext, f: LeadFilters): Prisma.LeadWhereInput {
   const where: Prisma.LeadWhereInput = { ...leadScope(ctx) };
@@ -249,6 +296,7 @@ function filterWhere(ctx: AccessContext, f: LeadFilters): Prisma.LeadWhereInput 
   else if (f.owner && permissions.seeAllLeads(ctx)) where.ownerId = f.owner;
   if (f.source) where.source = f.source;
   if (f.program) where.program = f.program;
+  if (f.noNext) Object.assign(where, NEEDS_NEXT_STEP);
   if (f.q) {
     const digits = f.q.replace(/\D/g, "");
     where.OR = [

@@ -13,7 +13,7 @@ export function listMembers(db: Db, ctx: AccessContext) {
   return db.membership.findMany({
     where: { orgId: ctx.orgId },
     orderBy: [{ active: "desc" }, { createdAt: "asc" }],
-    select: { id: true, role: true, active: true, createdAt: true, user: { select: { name: true, email: true } } },
+    select: { id: true, role: true, active: true, acceptsLeads: true, createdAt: true, user: { select: { name: true, email: true } } },
   });
 }
 

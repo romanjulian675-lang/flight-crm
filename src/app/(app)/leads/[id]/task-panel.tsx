@@ -6,7 +6,7 @@ import { ActionMessage, PendingButton, useActionForm } from "@/components/forms"
 import { useI18n } from "@/components/i18n-provider";
 import { TaskToggle } from "@/components/task-row";
 import { Card } from "@/components/ui";
-import { zonedDateString } from "@/lib/dates";
+import { QuickDateFields } from "@/components/quick-date";
 import { formatDate } from "@/lib/format";
 
 type Task = { id: string; title: string; dueAt: string; completedAt: string | null; assignee: string | null };
@@ -14,13 +14,7 @@ type Task = { id: string; title: string; dueAt: string; completedAt: string | nu
 export function TaskPanel({ leadId, tasks, myId, canAssign, members }: { leadId: string; tasks: Task[]; myId: string; canAssign: boolean; members: { id: string; name: string }[] }) {
   const { t, locale, timeZone } = useI18n();
   const { state, pending, formRef, onSubmit } = useActionForm(createTaskAction.bind(null, leadId), { resetOnSuccess: true });
-  // Quick-pick dates are fixed when the panel mounts (in the school's time zone).
-  const [{ now, quick }] = useState(() => {
-    const at = Date.now();
-    const day = (n: number) => zonedDateString(new Date(at + n * 86_400_000), timeZone);
-    return { now: at, quick: { 1: day(1), 3: day(3), 7: day(7) } as Record<number, string> };
-  });
-  const [date, setDate] = useState(quick[1]);
+  const [now] = useState(() => Date.now());
   const open = tasks.filter((x) => !x.completedAt);
   const done = tasks.filter((x) => x.completedAt).slice(0, 5);
 
@@ -48,32 +42,12 @@ export function TaskPanel({ leadId, tasks, myId, canAssign, members }: { leadId:
         </ul>
       )}
 
-      <form ref={formRef} onSubmit={onSubmit} onReset={() => setDate(quick[1])} className="space-y-2 border-t border-slate-100 pt-3">
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-2 border-t border-slate-100 pt-3">
         <label className="flex flex-col gap-1">
           <span>{t.task.title}</span>
           <input name="title" required placeholder={t.task.titlePlaceholder} />
         </label>
-        <div className="flex flex-wrap gap-1">
-          {[
-            [1, t.task.quick.tomorrow],
-            [3, t.task.quick.in3],
-            [7, t.task.quick.nextWeek],
-          ].map(([n, label]) => (
-            <button key={label} type="button" onClick={() => setDate(quick[n as number])} className={`rounded-full border px-2.5 py-0.5 text-xs ${date === quick[n as number] ? "border-brand-500 bg-brand-500/10 text-brand-500" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1">
-            <span>{t.task.date}</span>
-            <input name="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span>{t.task.time}</span>
-            <input name="time" type="time" defaultValue="09:00" />
-          </label>
-        </div>
+        <QuickDateFields formKey={state?.ok ? state.at : 0} />
         {canAssign && (
           <label className="flex flex-col gap-1">
             <span>{t.task.assignee}</span>

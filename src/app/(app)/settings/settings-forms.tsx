@@ -1,15 +1,27 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Copy, Trash2 } from "lucide-react";
-import { addStageAction, createInviteAction, deleteStageAction, moveStageAction, revokeInviteAction, updateMemberAction, updateOrgAction, updateStageAction } from "@/app/actions/settings";
+import {
+  addStageAction,
+  applySuggestedPlaybooksAction,
+  createInviteAction,
+  deleteStageAction,
+  moveStageAction,
+  revokeInviteAction,
+  setAcceptsLeadsAction,
+  updateMemberAction,
+  updateOrgAction,
+  updatePlaybookAction,
+  updateStageAction,
+} from "@/app/actions/settings";
 import { ActionMessage, PendingButton, TimeZoneSelect, useActionForm } from "@/components/forms";
 import { useI18n } from "@/components/i18n-provider";
 import { Avatar, Badge, buttonClass, STAGE_STYLES, stageStyle } from "@/components/ui";
 import { fmt } from "@/lib/i18n/format";
 import type { Role, StageKind } from "@/generated/prisma/enums";
 
-export function OrgForm({ org }: { org: { name: string; timeZone: string; agentsSeeAll: boolean } }) {
+export function OrgForm({ org }: { org: { name: string; timeZone: string; agentsSeeAll: boolean; requireNextStep: boolean } }) {
   const { t } = useI18n();
   const { state, pending, formRef, onSubmit } = useActionForm(updateOrgAction);
   return (
@@ -25,6 +37,10 @@ export function OrgForm({ org }: { org: { name: string; timeZone: string; agents
       <label className="flex items-center gap-2 text-sm sm:col-span-2">
         <input type="checkbox" name="agentsSeeAll" defaultChecked={org.agentsSeeAll} />
         {t.settings.agentsSeeAll}
+      </label>
+      <label className="flex items-center gap-2 text-sm sm:col-span-2">
+        <input type="checkbox" name="requireNextStep" defaultChecked={org.requireNextStep} />
+        {t.settings.requireNextStep}
       </label>
       <div className="flex items-center justify-end gap-3 sm:col-span-2">
         <ActionMessage state={state} />
@@ -47,7 +63,19 @@ function useRun() {
   return { pending, error, run };
 }
 
-export function MemberRow({ member, isMe, canEdit, grantable }: { member: { id: string; name: string; email: string; role: Role; active: boolean }; isMe: boolean; canEdit: boolean; grantable: Role[] }) {
+export function MemberRow({
+  member,
+  isMe,
+  canEdit,
+  canToggleLeads,
+  grantable,
+}: {
+  member: { id: string; name: string; email: string; role: Role; active: boolean; acceptsLeads: boolean };
+  isMe: boolean;
+  canEdit: boolean;
+  canToggleLeads: boolean;
+  grantable: Role[];
+}) {
   const { t } = useI18n();
   const { pending, error, run } = useRun();
   return (
@@ -60,6 +88,7 @@ export function MemberRow({ member, isMe, canEdit, grantable }: { member: { id: 
         <div className="truncate text-xs text-muted">{member.email}</div>
       </div>
       {!member.active && <Badge>{t.settings.inactive}</Badge>}
+      {member.active && <ReceivingLeadsToggle membershipId={member.id} on={member.acceptsLeads} disabled={!canToggleLeads} />}
       {canEdit ? (
         <>
           <select aria-label={t.settings.inviteRole} value={member.role} onChange={(e) => run(() => updateMemberAction(member.id, e.target.value as Role, member.active))} className="w-auto py-1" disabled={pending}>
@@ -147,7 +176,7 @@ export function PendingInviteRow({ invite }: { invite: { id: string; email: stri
   );
 }
 
-type StageRow = { id: string; name: string; kind: StageKind; color: string };
+type StageRow = { id: string; name: string; kind: StageKind; color: string; playbook: string; checklist: string[] };
 
 export function StageEditor({ stages, canEdit }: { stages: StageRow[]; canEdit: boolean }) {
   const { t } = useI18n();
@@ -170,6 +199,7 @@ export function StageEditor({ stages, canEdit }: { stages: StageRow[]; canEdit: 
           <StageItem key={`${s.id}:${s.name}:${s.kind}:${s.color}`} stage={s} first={i === 0} last={i === stages.length - 1} />
         ))}
       </ol>
+      <SuggestedPlaybooks />
       <form ref={addRef} onSubmit={onAdd} className="mt-4 flex flex-wrap items-end gap-2 border-t border-slate-100 pt-4">
         <StageFields />
         <PendingButton pending={adding} size="sm">
@@ -238,6 +268,77 @@ function StageItem({ stage, first, last }: { stage: StageRow; first: boolean; la
         </button>
       </form>
       {(error || (saveState && !saveState.ok)) && <p className="mt-1 text-sm text-red-700">{error ?? saveState?.message}</p>}
+      <PlaybookEditor stage={stage} />
     </li>
+  );
+}
+
+function PlaybookEditor({ stage }: { stage: StageRow }) {
+  const { t } = useI18n();
+  const { state, pending, formRef, onSubmit } = useActionForm(updatePlaybookAction.bind(null, stage.id));
+  const has = stage.playbook || stage.checklist.length;
+  return (
+    <details className="mt-2">
+      <summary className="cursor-pointer text-xs font-medium text-slate-600">
+        {t.settings.editPlaybook} {has ? `· ${stage.checklist.length} ✓` : "· —"}
+      </summary>
+      <form key={stage.playbook + stage.checklist.join("|")} ref={formRef} onSubmit={onSubmit} className="mt-2 grid gap-2 sm:grid-cols-2">
+        <label className="flex flex-col gap-1">
+          <span>{t.settings.playbook}</span>
+          <textarea name="playbook" rows={8} defaultValue={stage.playbook} className="text-xs" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span>{t.settings.checklist}</span>
+          <textarea name="checklist" rows={8} defaultValue={stage.checklist.join("\n")} className="text-xs" />
+        </label>
+        <div className="flex items-center justify-end gap-3 sm:col-span-2">
+          <ActionMessage state={state} />
+          <PendingButton pending={pending} size="sm" variant="secondary">
+            {t.common.save}
+          </PendingButton>
+        </div>
+      </form>
+    </details>
+  );
+}
+
+function SuggestedPlaybooks() {
+  const { t } = useI18n();
+  const [pending, start] = useTransition();
+  const [result, setResult] = useState<{ ok: boolean; message: string; at: number } | null>(null);
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3">
+      <button type="button" disabled={pending} onClick={() => start(async () => setResult(await applySuggestedPlaybooksAction()))} className={buttonClass("secondary", "sm")}>
+        {t.settings.useSuggested}
+      </button>
+      <ActionMessage state={result} />
+    </div>
+  );
+}
+
+/** Flips immediately (optimistic) and settles when the server confirms. */
+function ReceivingLeadsToggle({ membershipId, on, disabled }: { membershipId: string; on: boolean; disabled: boolean }) {
+  const { t } = useI18n();
+  const [value, setValue] = useOptimistic(on);
+  const [, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <label className={`flex items-center gap-1.5 text-xs ${value ? "text-emerald-700" : "text-amber-700"}`}>
+      <input
+        type="checkbox"
+        checked={value}
+        disabled={disabled}
+        onChange={(e) => {
+          const next = e.target.checked;
+          start(async () => {
+            setValue(next);
+            const res = await setAcceptsLeadsAction(membershipId, next);
+            setError(res && !res.ok ? res.message : null);
+          });
+        }}
+      />
+      {value ? t.settings.receivingLeads : t.settings.paused}
+      {error && <span className="text-red-700">{error}</span>}
+    </label>
   );
 }

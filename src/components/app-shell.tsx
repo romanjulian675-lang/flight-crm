@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { CheckSquare, ChevronsUpDown, Columns3, LayoutDashboard, LogOut, Menu, Plane, Plug, Plus, Settings, Users, X } from "lucide-react";
+import { BarChart3, CheckSquare, MessageCircle, ChevronsUpDown, Columns3, LayoutDashboard, LogOut, Menu, Plane, Plug, Plus, Settings, Users, X } from "lucide-react";
 import { signOut, switchSchool } from "@/app/actions/session";
 import { useI18n } from "@/components/i18n-provider";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -18,10 +18,12 @@ type Props = {
   canAssign: boolean;
   canManage: boolean;
   members: { id: string; name: string }[];
+  /** Unread WhatsApp messages, or null when WhatsApp isn't set up (hides the menu item). */
+  waUnread: number | null;
   children: React.ReactNode;
 };
 
-export function AppShell({ me, org, orgs, canAssign, canManage, members, children }: Props) {
+export function AppShell({ me, org, orgs, canAssign, canManage, members, waUnread, children }: Props) {
   const { t, locale } = useI18n();
   const pathname = usePathname();
   const [drawer, setDrawer] = useState(false);
@@ -51,8 +53,10 @@ export function AppShell({ me, org, orgs, canAssign, canManage, members, childre
   const nav = [
     { href: "/", label: t.nav.dashboard, icon: LayoutDashboard },
     { href: "/pipeline", label: t.nav.pipeline, icon: Columns3 },
+    ...(waUnread !== null ? [{ href: "/inbox", label: t.nav.inbox, icon: MessageCircle, badge: waUnread }] : []),
     { href: "/leads", label: t.nav.leads, icon: Users },
     { href: "/tasks", label: t.nav.tasks, icon: CheckSquare },
+    { href: "/team", label: canManage ? t.nav.team : t.nav.myStats, icon: BarChart3 },
     ...(canManage ? [{ href: "/integrations", label: t.nav.integrations, icon: Plug }] : []),
     { href: "/settings", label: t.nav.settings, icon: Settings },
   ];
@@ -97,7 +101,7 @@ export function AppShell({ me, org, orgs, canAssign, canManage, members, childre
       </div>
 
       <nav className="mt-4 flex-1 space-y-0.5 px-3">
-        {nav.map(({ href, label, icon: Icon }) => (
+        {nav.map(({ href, label, icon: Icon, ...rest }) => (
           <Link
             key={href}
             href={href}
@@ -105,6 +109,9 @@ export function AppShell({ me, org, orgs, canAssign, canManage, members, childre
             className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${isActive(href) ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}
           >
             <Icon size={17} /> {label}
+            {"badge" in rest && rest.badge ? (
+              <span className="ml-auto rounded-full bg-[#25D366] px-1.5 text-[11px] font-semibold text-white tabular-nums">{rest.badge}</span>
+            ) : null}
           </Link>
         ))}
       </nav>
@@ -131,8 +138,9 @@ export function AppShell({ me, org, orgs, canAssign, canManage, members, childre
     <div className="min-h-screen md:flex">
       {/* Phone top bar */}
       <div className="fixed inset-x-0 top-0 z-30 flex h-12 items-center gap-2 bg-brand px-3 text-white md:hidden">
-        <button aria-label="Menu" onClick={() => setDrawer(true)} className="rounded p-1.5 hover:bg-white/10">
+        <button aria-label="Menu" onClick={() => setDrawer(true)} className="relative rounded p-1.5 hover:bg-white/10">
           <Menu size={20} />
+          {waUnread ? <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#25D366]" /> : null}
         </button>
         <span className="flex-1 truncate font-semibold">{org.name}</span>
         <button aria-label={t.nav.newLead} onClick={() => setAdding(true)} className="rounded-lg bg-accent p-1.5">

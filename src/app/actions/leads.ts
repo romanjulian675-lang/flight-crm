@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formBool, formOptional, formString, runAction } from "@/lib/action";
 import { getI18n } from "@/lib/i18n";
-import { assignLead, createLead, deleteLead, findDuplicates, leadInput, logActivity, moveLead, normalizePhone, updateLead, type LeadInput } from "@/modules/leads";
+import { assignLead, createLead, deleteLead, findDuplicates, leadInput, logActivity, moveLead, normalizePhone, setChecklistItem, updateLead, type LeadInput } from "@/modules/leads";
 import { requireAccess } from "@/lib/session";
 
 type Duplicate = Awaited<ReturnType<typeof findDuplicates>>[number];
@@ -67,13 +67,19 @@ export async function assignLeadAction(leadId: string, ownerId: string | null) {
 
 export async function logActivityAction(leadId: string, _prev: unknown, fd: FormData) {
   return runAction(async (ctx) => {
+    const nextTitle = formString(fd, "nextTitle");
     await logActivity(prisma, ctx, leadId, {
       type: formString(fd, "type") as "NOTE",
       body: formString(fd, "body"),
       outcome: (formOptional(fd, "outcome") as "CONNECTED" | null) ?? null,
       direction: formString(fd, "direction") === "IN" ? "IN" : "OUT",
+      followUp: nextTitle ? { title: nextTitle, date: formString(fd, "nextDate"), time: formString(fd, "nextTime") || "09:00" } : null,
     });
   });
+}
+
+export async function setChecklistItemAction(leadId: string, stageId: string, item: string, checked: boolean) {
+  return runAction(async (ctx) => setChecklistItem(prisma, ctx, leadId, stageId, item, checked));
 }
 
 export async function deleteLeadAction(leadId: string) {

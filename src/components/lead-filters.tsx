@@ -30,7 +30,7 @@ export function LeadFilters({ members, canSeeAll }: { members: { id: string; nam
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
-  const active = ["q", "owner", "source", "program"].some((k) => params.get(k));
+  const active = ["q", "owner", "source", "program", "noNext"].some((k) => params.get(k));
 
   return (
     <div className={`mb-4 flex flex-wrap items-center gap-2 ${pending ? "opacity-70" : ""}`}>
@@ -59,6 +59,10 @@ export function LeadFilters({ members, canSeeAll }: { members: { id: string; nam
         <option value="">{t.pipeline.anyProgram}</option>
         <ProgramOptions />
       </select>
+      <label className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm ${params.get("noNext") ? "border-amber-300 bg-amber-50 text-amber-900" : "border-slate-300 bg-white text-slate-600"}`}>
+        <input type="checkbox" checked={!!params.get("noNext")} onChange={(e) => set("noNext", e.target.checked ? "1" : "")} />
+        {t.pipeline.needsNextStep}
+      </label>
       {active && (
         <button
           type="button"

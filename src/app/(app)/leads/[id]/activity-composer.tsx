@@ -5,6 +5,7 @@ import { Calendar, Mail, MessageSquare, Phone, StickyNote } from "lucide-react";
 import { logActivityAction } from "@/app/actions/leads";
 import { ActionMessage, PendingButton, useActionForm } from "@/components/forms";
 import { useI18n } from "@/components/i18n-provider";
+import { QuickDateFields } from "@/components/quick-date";
 import { CALL_OUTCOME_VALUES } from "@/lib/enums";
 
 const TYPES = [
@@ -15,9 +16,14 @@ const TYPES = [
   { type: "MEETING", icon: Calendar },
 ] as const;
 
-export function ActivityComposer({ leadId }: { leadId: string }) {
+/**
+ * Log a touch. On an open lead with nothing scheduled (and the school requiring it), the next step
+ * is part of the same form, so logging a call and planning the follow-up is one save.
+ */
+export function ActivityComposer({ leadId, nextRequired }: { leadId: string; nextRequired: boolean }) {
   const { t } = useI18n();
   const [type, setType] = useState<(typeof TYPES)[number]["type"]>("CALL");
+  const [wantsNext, setWantsNext] = useState(false);
   const { state, pending, formRef, onSubmit } = useActionForm(logActivityAction.bind(null, leadId), { resetOnSuccess: true });
 
   return (
@@ -64,6 +70,17 @@ export function ActivityComposer({ leadId }: { leadId: string }) {
           <span className="sr-only">{t.log.body}</span>
           <textarea name="body" rows={3} placeholder={t.log.bodyPlaceholder} required={type === "NOTE"} />
         </label>
+        {type !== "NOTE" && (nextRequired ? (
+          <NextStep required formKey={state?.ok ? state.at : 0} />
+        ) : (
+          <>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" checked={wantsNext} onChange={(e) => setWantsNext(e.target.checked)} />
+              {t.lead.nextStepOptional}
+            </label>
+            {wantsNext && <NextStep formKey={state?.ok ? state.at : 0} />}
+          </>
+        ))}
         <div className="flex items-center justify-end gap-3">
           <ActionMessage state={state} />
           <PendingButton pending={pending} pendingText={t.common.working}>
@@ -72,5 +89,20 @@ export function ActivityComposer({ leadId }: { leadId: string }) {
         </div>
       </form>
     </section>
+  );
+}
+
+function NextStep({ required = false, formKey }: { required?: boolean; formKey: number }) {
+  const { t } = useI18n();
+  return (
+    <fieldset className={`space-y-2 rounded-lg border p-3 ${required ? "border-amber-300 bg-amber-50/60" : "border-slate-200"}`}>
+      <legend className="px-1 text-xs font-semibold text-slate-700">{t.lead.nextStep}</legend>
+      {required && <p className="text-xs text-amber-800">{t.lead.nextStepRequired}</p>}
+      <label className="flex flex-col gap-1">
+        <span className="sr-only">{t.task.title}</span>
+        <input name="nextTitle" required placeholder={t.task.titlePlaceholder} />
+      </label>
+      <QuickDateFields dateName="nextDate" timeName="nextTime" formKey={formKey} />
+    </fieldset>
   );
 }

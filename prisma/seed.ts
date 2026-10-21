@@ -78,15 +78,21 @@ async function main() {
       const stageIdx = [0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6][rand(14)];
       const ctx = lead.ownerId ? agent : manager!;
       if (stageIdx > 0) {
-        await logActivity(db, ctx, lead.id, { type: "CALL", outcome: "CONNECTED", body: "Intro call. Explained the program, costs and timeline." });
+        await logActivity(db, ctx, lead.id, {
+          type: "CALL",
+          outcome: "CONNECTED",
+          body: "Intro call. Explained the program, costs and timeline.",
+          followUp: { title: ["Call back", "Send pricing sheet", "Confirm discovery flight", "Check on financing"][rand(4)], date: today(rand(6) - 2), time: "10:00" },
+        });
         await moveLead(db, ctx, lead.id, stages[stageIdx].id, null, stages[stageIdx].kind === "LOST" ? ["Too expensive", "Chose another school", "Medical issue"][rand(3)] : null);
         const movedAt = new Date(Math.min(Date.now(), createdAt.getTime() + rand(5) * 86_400_000));
         await db.lead.update({ where: { id: lead.id }, data: { stageChangedAt: movedAt } });
       } else if (rand(2)) {
-        await logActivity(db, ctx, lead.id, { type: "CALL", outcome: "VOICEMAIL" });
+        await logActivity(db, ctx, lead.id, { type: "CALL", outcome: "VOICEMAIL", followUp: { title: "Try again + send a text", date: today(rand(3)), time: "16:00" } });
       }
-      if (stages[stageIdx].kind === "OPEN" && rand(4) > 0) {
-        await createTask(db, ctx, lead.id, { title: ["Call back", "Send pricing sheet", "Confirm discovery flight", "Check on financing"][rand(4)], date: today(rand(6) - 2), time: "10:00" });
+      // A few untouched new leads keep no next step, so the "no next step" views have something to show.
+      if (stageIdx === 0 && rand(3) === 0) {
+        await createTask(db, ctx, lead.id, { title: "Call back", date: today(rand(4) - 1), time: "10:00" });
       }
     }
     console.log(`[seed] "${org.name}" with ${DEMO_USERS.length} users and 30 leads. Sign in with:`);
