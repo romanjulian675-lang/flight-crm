@@ -200,7 +200,7 @@ export function StageEditor({ stages, canEdit }: { stages: StageRow[]; canEdit: 
         ))}
       </ol>
       <SuggestedPlaybooks />
-      <form ref={addRef} onSubmit={onAdd} className="mt-4 flex flex-wrap items-end gap-2 border-t border-slate-100 pt-4">
+      <form ref={addRef} onSubmit={onAdd} className="mt-4 flex flex-wrap items-end gap-2 border-t border-line pt-4">
         <StageFields />
         <PendingButton pending={adding} size="sm">
           {t.settings.addStage}
@@ -245,7 +245,7 @@ function StageItem({ stage, first, last }: { stage: StageRow; first: boolean; la
   const { state: saveState, pending: saving, formRef, onSubmit } = useActionForm(updateStageAction.bind(null, stage.id));
   const { pending, error, run } = useRun();
   return (
-    <li className={`rounded-lg border border-slate-200 p-2 ${pending ? "opacity-60" : ""}`}>
+    <li className={`rounded-lg border border-line p-2 ${pending ? "opacity-60" : ""}`}>
       <form ref={formRef} onSubmit={onSubmit} className="flex flex-wrap items-center gap-2">
         <StageFields stage={stage} />
         <PendingButton pending={saving} size="sm" variant="secondary">

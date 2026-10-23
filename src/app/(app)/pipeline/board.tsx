@@ -148,12 +148,13 @@ export function Board({ stages: initial }: { stages: Stage[] }) {
           setStages(initial);
         }}
       >
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
+        <div className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6">
           {stages.map((s) => (
             <Column key={s.id} stage={s} />
           ))}
         </div>
-        <DragOverlay>{activeCard ? <CardView card={activeCard} dragging /> : null}</DragOverlay>
+        {/* Drop settles with the same strong ease-out the rest of the UI uses. */}
+        <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }}>{activeCard ? <CardView card={activeCard} dragging /> : null}</DragOverlay>
       </DndContext>
 
       {lostPrompt && (
@@ -176,14 +177,14 @@ function Column({ stage }: { stage: Stage }) {
   const { t } = useI18n();
   const { setNodeRef, isOver } = useDroppable({ id: `${COL}${stage.id}` });
   return (
-    <section className="flex w-72 shrink-0 snap-start flex-col rounded-xl bg-slate-100/80" aria-label={stage.name}>
+    <section className="flex w-72 shrink-0 snap-start flex-col rounded-lg border border-line bg-raised" aria-label={stage.name}>
       <header className="flex items-center gap-2 px-3 pt-3 pb-2">
         <span className={`h-2 w-2 rounded-full ${stageStyle(stage.color).dot}`} />
-        <h2 className="flex-1 truncate text-sm font-semibold text-slate-800">{stage.name}</h2>
-        <span className="rounded-full bg-white px-2 text-xs font-medium text-slate-500 tabular-nums">{stage.leads.length}</span>
+        <h2 className="flex-1 truncate text-sm font-semibold text-ink">{stage.name}</h2>
+        <span className="text-xs font-medium text-slate-500 tabular-nums">{stage.leads.length}</span>
       </header>
       <SortableContext id={stage.id} items={stage.leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-        <div ref={setNodeRef} className={`flex min-h-24 flex-1 flex-col gap-2 rounded-b-xl p-2 transition ${isOver ? "bg-sky-100/60" : ""}`}>
+        <div ref={setNodeRef} className={`flex min-h-24 flex-1 flex-col gap-2 rounded-b-lg p-2 transition-colors ${isOver ? "bg-accent/8" : ""}`}>
           {stage.leads.map((l) => (
             <SortableCard key={l.id} card={l} />
           ))}
@@ -197,7 +198,7 @@ function Column({ stage }: { stage: Stage }) {
 function SortableCard({ card }: { card: Card }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={isDragging ? "opacity-30" : ""} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={isDragging ? "rounded-md opacity-40 outline-2 -outline-offset-2 outline-dashed outline-slate-300 [&>*]:invisible" : ""} {...attributes} {...listeners}>
       <CardView card={card} />
     </div>
   );
@@ -208,7 +209,7 @@ function CardView({ card, dragging = false }: { card: Card; dragging?: boolean }
   const days = daysSince(card.stageChangedAt);
   const overdue = card.nextDue && new Date(card.nextDue) < new Date();
   return (
-    <div className={`rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm ${dragging ? "rotate-2 shadow-lg ring-2 ring-sky-400" : "hover:border-slate-300"}`}>
+    <div className={`rounded-md border border-line bg-white p-3 text-sm shadow-xs transition-[border-color,box-shadow] ${dragging ? "rotate-1 cursor-grabbing border-slate-300 shadow-[0_16px_32px_-12px_rgb(16_22_31/0.28)]" : "cursor-grab hover:border-slate-300 hover:shadow-sm"}`}>
       <div className="flex items-start justify-between gap-2">
         <Link href={`/leads/${card.id}`} className="font-medium text-slate-900 hover:text-brand-500 hover:underline" onPointerDown={(e) => e.stopPropagation()}>
           {card.name}
@@ -217,7 +218,10 @@ function CardView({ card, dragging = false }: { card: Card; dragging?: boolean }
       </div>
       {card.phone && (
         <div className="mt-1 flex items-center gap-1 text-xs text-muted">
-          <Phone size={11} /> {formatPhone(card.phone)}
+          <Phone size={11} />
+          <a href={`tel:+${card.phone}`} onPointerDown={(e) => e.stopPropagation()} className="font-mono hover:text-ink hover:underline">
+            {formatPhone(card.phone)}
+          </a>
         </div>
       )}
       <div className="mt-2 flex flex-wrap gap-1">

@@ -34,7 +34,7 @@ export default async function SettingsPage() {
 
       <Card title={t.settings.team}>
         <p className="mb-3 text-xs text-muted">{t.settings.roleHelp}</p>
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-line">
           {members.map((m) => (
             <MemberRow
               key={m.id}
@@ -47,13 +47,13 @@ export default async function SettingsPage() {
           ))}
         </ul>
         {canTeam && (
-          <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="mt-5 border-t border-line pt-4">
             <h3 className="mb-2 text-sm font-semibold">{t.settings.invite}</h3>
             <InviteForm roles={ctx.role === "OWNER" ? ["AGENT", "MANAGER", "OWNER"] : ["AGENT"]} />
             {invites.length > 0 && (
               <>
                 <h3 className="mt-5 mb-2 text-sm font-semibold">{t.settings.pendingInvites}</h3>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-line">
                   {invites.map((i) => (
                     <PendingInviteRow key={i.id} invite={{ id: i.id, email: i.email, role: i.role, expires: formatDate(i.expiresAt, locale, ctx.timeZone) }} />
                   ))}

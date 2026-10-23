@@ -37,7 +37,7 @@ export function LeadControls({ leadId, stageId, stages, ownerId, ownerName, memb
   };
 
   return (
-    <div className={`flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${pending ? "opacity-60" : ""}`}>
+    <div className={`flex flex-wrap items-end gap-3 rounded-lg border border-line bg-white p-3 ${pending ? "opacity-60" : ""}`}>
       <label className="flex min-w-56 flex-1 flex-col gap-1 sm:flex-none">
         <span>{t.lead.stage}</span>
         <select value={stageId} onChange={(e) => onStage(e.target.value)} disabled={pending}>

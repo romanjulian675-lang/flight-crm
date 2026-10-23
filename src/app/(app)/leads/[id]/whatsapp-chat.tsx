@@ -51,9 +51,9 @@ export function WhatsAppChat({ leadId, firstName, messages, lastInboundAt, myNam
   const left = msLeft >= 3_600_000 ? fmt(t.team.hours, { n: Math.floor(msLeft / 3_600_000) }) : fmt(t.team.minutes, { n: Math.max(1, Math.floor(msLeft / 60_000)) });
 
   return (
-    <section id="whatsapp" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section id="whatsapp" className="overflow-hidden rounded-lg border border-line bg-white">
       <AutoRefresh seconds={8} />
-      <header className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-[#075E54] px-4 py-2.5 text-white">
+      <header className="flex flex-wrap items-center gap-2 border-b border-line bg-[#075E54] px-4 py-2.5 text-white">
         <MessageCircle size={16} />
         <h2 className="flex-1 text-sm font-semibold">{t.whatsapp.chatTitle}</h2>
         {open && <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs">{fmt(t.whatsapp.windowOpen, { time: left })}</span>}
@@ -100,7 +100,7 @@ function TextComposer({ leadId }: { leadId: string }) {
   const { t } = useI18n();
   const { state, pending, formRef, onSubmit } = useActionForm(sendWhatsAppTextAction.bind(null, leadId), { resetOnSuccess: true });
   return (
-    <form ref={formRef} onSubmit={onSubmit} className="flex items-end gap-2 border-t border-slate-100 p-3">
+    <form ref={formRef} onSubmit={onSubmit} className="flex items-end gap-2 border-t border-line p-3">
       <label className="flex-1">
         <span className="sr-only">{t.whatsapp.placeholder}</span>
         <textarea
@@ -144,7 +144,7 @@ function TemplateComposer({ leadId, firstName }: { leadId: string; firstName: st
     });
 
   return (
-    <div className="space-y-2 border-t border-slate-100 p-3">
+    <div className="space-y-2 border-t border-line p-3">
       <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">{t.whatsapp.windowClosed}</p>
       {!templates ? (
         <>

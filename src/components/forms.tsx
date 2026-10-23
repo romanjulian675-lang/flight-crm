@@ -2,13 +2,25 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useFormStatus } from "react-dom";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/components/toaster";
 import { buttonClass } from "@/components/ui";
+
+/** Keeps the label (so the button doesn't jump in width) and adds a spinner while saving. */
+function Pending({ text, children }: { text?: string; children: React.ReactNode }) {
+  return (
+    <>
+      <Loader2 size={14} className="animate-spin" aria-hidden />
+      {text && text !== "…" ? text : children}
+    </>
+  );
+}
 
 export function SubmitButton({ children, variant = "primary", size = "md", className = "", pendingText }: { children: React.ReactNode; variant?: "primary" | "secondary" | "danger"; size?: "sm" | "md"; className?: string; pendingText?: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={`${buttonClass(variant, size)} ${className}`}>
-      {pending ? (pendingText ?? "…") : children}
+    <button type="submit" disabled={pending} aria-busy={pending} className={`${buttonClass(variant, size)} ${className}`}>
+      {pending ? <Pending text={pendingText}>{children}</Pending> : children}
     </button>
   );
 }
@@ -22,17 +34,18 @@ export function FormError({ message }: { message?: string | null }) {
   );
 }
 
-/** Shows an action's result message; success messages fade after a moment, errors stay. */
+/** Success messages go to a toast (out of the way); errors stay inline, next to what needs fixing. */
 export function ActionMessage({ state }: { state: { ok: boolean; message: string; at: number } | null | undefined }) {
-  const [hiddenAt, setHiddenAt] = useState<number | null>(null);
+  const shown = useRef<number | null>(null);
   useEffect(() => {
-    if (!state?.ok) return;
-    const id = setTimeout(() => setHiddenAt(state.at), 2500);
-    return () => clearTimeout(id);
+    if (state?.ok && state.message && shown.current !== state.at) {
+      shown.current = state.at;
+      toast(state.message);
+    }
   }, [state]);
-  if (!state?.message || hiddenAt === state.at) return null;
+  if (!state?.message || state.ok) return null;
   return (
-    <p role={state.ok ? "status" : "alert"} className={`text-sm ${state.ok ? "text-emerald-700" : "text-red-700"}`}>
+    <p role="alert" className="animate-fade-in text-sm text-red-700">
       {state.message}
     </p>
   );
@@ -80,8 +93,8 @@ export function useActionForm<S extends Result>(action: (prev: S, fd: FormData) 
 
 export function PendingButton({ pending, children, variant = "primary", size = "md", pendingText = "…" }: { pending: boolean; children: React.ReactNode; variant?: "primary" | "secondary" | "danger"; size?: "sm" | "md"; pendingText?: string }) {
   return (
-    <button type="submit" disabled={pending} className={buttonClass(variant, size)}>
-      {pending ? pendingText : children}
+    <button type="submit" disabled={pending} aria-busy={pending} className={buttonClass(variant, size)}>
+      {pending ? <Pending text={pendingText}>{children}</Pending> : children}
     </button>
   );
 }

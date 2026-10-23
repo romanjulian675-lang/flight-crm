@@ -14,7 +14,7 @@ export function PlaybookCard({ leadId, stage, done }: { leadId: string; stage: {
   const progress = stage.checklist.length ? `${stage.checklist.filter((i) => checked.includes(i)).length}/${stage.checklist.length}` : null;
 
   return (
-    <section className="rounded-xl border border-sky-200 bg-sky-50/50 shadow-sm">
+    <section className="rounded-xl border border-sky-200 bg-sky-50/50">
       <header className="flex items-center gap-2 border-b border-sky-100 px-4 py-3">
         <BookOpen size={16} className="text-sky-700" />
         <h2 className="flex-1 text-sm font-semibold text-sky-950">{fmt(t.lead.playbookTitle, { stage: stage.name })}</h2>

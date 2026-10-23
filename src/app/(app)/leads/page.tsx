@@ -35,7 +35,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
           <ul className="space-y-2 md:hidden">
             {leads.map((l) => (
               <li key={l.id}>
-                <Link href={`/leads/${l.id}`} className="block rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <Link href={`/leads/${l.id}`} className="pressable block rounded-lg border border-line bg-white p-3 active:bg-slate-50">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{fullName(l)}</span>
                     <StageChip name={l.stage.name} color={l.stage.color} />
@@ -48,35 +48,35 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
             ))}
           </ul>
           {/* Desktop: table */}
-          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm md:block">
+          <div className="-mx-2 hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-medium tracking-wide text-slate-500 uppercase">
+              <thead className="border-b border-line text-xs font-medium text-slate-500">
                 <tr>
                   {[c.name, c.contact, c.stage, c.program, c.source, c.owner, c.created, c.lastContact].map((h) => (
-                    <th key={h} className="px-3 py-2.5 font-medium">
+                    <th key={h} scope="col" className="px-2 pb-2.5 font-medium whitespace-nowrap">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line">
                 {leads.map((l) => (
-                  <tr key={l.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2.5">
-                      <Link href={`/leads/${l.id}`} className="font-medium text-slate-900 hover:text-brand-500 hover:underline">
+                  <tr key={l.id} className="relative cursor-pointer transition-colors hover:bg-slate-50">
+                    <td className="px-2 py-3">
+                      <Link href={`/leads/${l.id}`} className="font-medium whitespace-nowrap text-ink after:absolute after:inset-0 hover:text-accent hover:underline">
                         {fullName(l)}
                       </Link>
                     </td>
-                    <td className="px-3 py-2.5 text-slate-600">
-                      <div>{formatPhone(l.phone)}</div>
+                    <td className="px-2 py-3 text-slate-600">
+                      <div className="font-mono text-[13px]">{formatPhone(l.phone)}</div>
                       <div className="text-xs text-muted">{l.email}</div>
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-3">
                       <StageChip name={l.stage.name} color={l.stage.color} />
                     </td>
-                    <td className="px-3 py-2.5 text-slate-600">{t.program[l.program]}</td>
-                    <td className="px-3 py-2.5 text-slate-600">{t.source[l.source]}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-3 text-slate-600">{t.program[l.program]}</td>
+                    <td className="px-2 py-3 text-slate-600">{t.source[l.source]}</td>
+                    <td className="px-2 py-3">
                       {l.owner ? (
                         <span className="flex items-center gap-1.5">
                           <Avatar name={l.owner.user.name} /> <span className="text-slate-600">{l.owner.user.name}</span>
@@ -85,8 +85,8 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
                         <span className="text-muted">{t.common.unassigned}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-slate-600">{formatDate(l.createdAt, locale, ctx.timeZone)}</td>
-                    <td className={`px-3 py-2.5 ${l.lastContactAt ? "text-slate-600" : "font-medium text-amber-600"}`}>
+                    <td className="px-2 py-3 text-slate-600">{formatDate(l.createdAt, locale, ctx.timeZone)}</td>
+                    <td className={`px-2 py-3 ${l.lastContactAt ? "text-slate-600" : "font-medium text-amber-600"}`}>
                       {l.lastContactAt ? formatDate(l.lastContactAt, locale, ctx.timeZone) : t.lead.never}
                     </td>
                   </tr>

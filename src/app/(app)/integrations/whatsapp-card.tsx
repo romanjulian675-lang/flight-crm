@@ -26,8 +26,8 @@ export function WhatsAppCard({ account }: { account: Account | null }) {
   const [editing, setEditing] = useState(!account?.connected);
   const live = account?.connected;
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <header className="flex flex-wrap items-start gap-3 border-b border-slate-100 px-4 py-3">
+    <section className="rounded-lg border border-line bg-white">
+      <header className="flex flex-wrap items-start gap-3 border-b border-line px-4 py-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#25D366]/15 text-[#128C7E]">
           <MessageCircle size={18} />
         </span>
@@ -60,7 +60,7 @@ export function WhatsAppCard({ account }: { account: Account | null }) {
         {editing ? (
           <ConnectForm account={account} onSaved={() => setEditing(false)} onCancel={live ? () => setEditing(false) : undefined} />
         ) : (
-          <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+          <div className="flex flex-wrap gap-2 border-t border-line pt-4">
             <button type="button" onClick={() => setEditing(true)} className={buttonClass("secondary", "sm")}>
               {t.whatsapp.update}
             </button>
@@ -83,7 +83,7 @@ function ConnectForm({ account, onSaved, onCancel }: { account: Account | null; 
     if (state?.ok) onSaved();
   }, [state, onSaved]);
   return (
-    <form ref={formRef} onSubmit={onSubmit} className="space-y-3 border-t border-slate-100 pt-4">
+    <form ref={formRef} onSubmit={onSubmit} className="space-y-3 border-t border-line pt-4">
       <h3 className="text-sm font-semibold">{t.whatsapp.setupTitle}</h3>
       <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
         {t.whatsapp.steps.map((s) => (
@@ -129,7 +129,7 @@ function AutoReplyForm({ value }: { value: string }) {
   const { t } = useI18n();
   const { state, pending, formRef, onSubmit } = useActionForm(updateAutoReplyAction);
   return (
-    <form key={value} ref={formRef} onSubmit={onSubmit} className="space-y-2 border-t border-slate-100 pt-4">
+    <form key={value} ref={formRef} onSubmit={onSubmit} className="space-y-2 border-t border-line pt-4">
       <label className="flex flex-col gap-1">
         <span>{t.whatsapp.autoReply}</span>
         <textarea name="autoReply" rows={3} defaultValue={value} placeholder={t.whatsapp.autoReplyPlaceholder} maxLength={1000} />

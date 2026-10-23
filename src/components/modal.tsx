@@ -19,17 +19,17 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
     };
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-slate-900/50 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`flex max-h-[92svh] w-full flex-col rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"}`}
+        className={`flex max-h-[92svh] w-full animate-sheet-in flex-col rounded-t-2xl bg-white shadow-2xl sm:animate-dialog-in sm:rounded-2xl ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"}`}
       >
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+        <header className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-semibold">{title}</h2>
-          <button type="button" aria-label="Close" onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+          <button type="button" aria-label="Close" onClick={onClose} className="pressable -mr-1 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <X size={18} />
           </button>
         </header>

@@ -44,3 +44,11 @@ next-env.d.ts
 # local database
 /.pgdata
 /src/generated
+
+# local agent and analysis tooling
+/.claude/
+/graphify-out/
+/.tw-check.mjs
+/skills-lock.json
+/.taste-skill/
+/src/tmp/

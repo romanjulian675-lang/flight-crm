@@ -23,7 +23,7 @@ export default async function InboxPage() {
       {rows.length === 0 ? (
         <Empty>{t.whatsapp.inboxEmpty}</Empty>
       ) : (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
           {rows.map((m) => {
             const awaitingUs = m.direction === "IN";
             return (

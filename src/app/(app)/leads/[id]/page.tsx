@@ -120,7 +120,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             {lead.activities.length === 0 ? (
               <Empty>{t.lead.noActivity}</Empty>
             ) : (
-              <ol className="relative space-y-4 border-l border-slate-200 pl-5">
+              <ol className="relative space-y-4 border-l border-line pl-5">
                 {lead.activities.map((a) => (
                   <li key={a.id} className="relative">
                     <span className="absolute top-1 -left-[25px] h-2.5 w-2.5 rounded-full border-2 border-white bg-slate-300 ring-1 ring-slate-200" />
@@ -177,7 +177,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 isInternational: lead.isInternational,
               }}
             />
-            <dl className="mt-4 space-y-1 border-t border-slate-100 pt-3 text-xs text-muted">
+            <dl className="mt-4 space-y-1 border-t border-line pt-3 text-xs text-muted">
               <div className="flex justify-between">
                 <dt>{t.lead.created}</dt>
                 <dd>{formatDate(lead.createdAt, locale, ctx.timeZone, true)}</dd>
@@ -206,7 +206,7 @@ function ContactLink({ href, icon, label, external = false }: { href: string; ic
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+      className="pressable inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
     >
       {icon}
       {label}

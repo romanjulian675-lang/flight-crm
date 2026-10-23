@@ -20,6 +20,8 @@ async function main() {
     password: "flightcrm",
     port,
     persistent: true,
+    // Keep the local cluster UTF-8 so Spanish text and playbook symbols can be stored.
+    initdbFlags: ["--encoding=UTF8"],
     postgresFlags: ["-c", "timezone=UTC", "-c", "log_timezone=UTC"],
     onLog: () => {},
   });

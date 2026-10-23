@@ -27,8 +27,8 @@ export function ActivityComposer({ leadId, nextRequired }: { leadId: string; nex
   const { state, pending, formRef, onSubmit } = useActionForm(logActivityAction.bind(null, leadId), { resetOnSuccess: true });
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div role="tablist" aria-label={t.log.title} className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 pt-2">
+    <section className="rounded-lg border border-line bg-white">
+      <div role="tablist" aria-label={t.log.title} className="flex gap-1 overflow-x-auto border-b border-line px-2 pt-2 [scrollbar-width:none]">
         {TYPES.map(({ type: ty, icon: Icon }) => (
           <button
             key={ty}
@@ -36,11 +36,12 @@ export function ActivityComposer({ leadId, nextRequired }: { leadId: string; nex
             type="button"
             aria-selected={type === ty}
             onClick={() => setType(ty)}
-            className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${type === ty ? "border-brand-500 text-brand-500" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+            className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap ${type === ty ? "border-accent text-ink" : "border-transparent text-slate-500 hover:text-slate-800"}`}
           >
-            <Icon size={15} /> {t.log[ty]}
+            <Icon size={15} className={type === ty ? "text-accent" : undefined} /> {t.log[ty]}
           </button>
         ))}
+
       </div>
       <form ref={formRef} onSubmit={onSubmit} className="space-y-3 p-4">
         <input type="hidden" name="type" value={type} />
@@ -95,7 +96,7 @@ export function ActivityComposer({ leadId, nextRequired }: { leadId: string; nex
 function NextStep({ required = false, formKey }: { required?: boolean; formKey: number }) {
   const { t } = useI18n();
   return (
-    <fieldset className={`space-y-2 rounded-lg border p-3 ${required ? "border-amber-300 bg-amber-50/60" : "border-slate-200"}`}>
+    <fieldset className={`space-y-2 rounded-lg border p-3 ${required ? "border-amber-300 bg-amber-50/60" : "border-line"}`}>
       <legend className="px-1 text-xs font-semibold text-slate-700">{t.lead.nextStep}</legend>
       {required && <p className="text-xs text-amber-800">{t.lead.nextStepRequired}</p>}
       <label className="flex flex-col gap-1">

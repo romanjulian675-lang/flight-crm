@@ -1,7 +1,7 @@
 import { AutoRefresh } from "@/components/auto-refresh";
 import Link from "next/link";
 import { TaskToggle } from "@/components/task-row";
-import { Card, Empty, PageHeader } from "@/components/ui";
+import { Card, Empty, PageHeader, buttonClass } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { formatDate, formatPhone, fullName } from "@/lib/format";
 import { getI18n } from "@/lib/i18n";
@@ -25,24 +25,41 @@ export default async function TasksPage() {
       <AutoRefresh />
       <PageHeader title={t.nav.tasks} />
       {total === 0 ? (
-        <Empty>{t.task.empty}</Empty>
+        <Empty
+          action={
+            <Link href="/pipeline?noNext=1" className={buttonClass("secondary")}>
+              {t.task.emptyAction}
+            </Link>
+          }
+        >
+          <span className="block font-medium text-ink">{t.task.empty}</span>
+          {t.task.emptyHint}
+        </Empty>
       ) : (
         <div className="space-y-4">
           {groups
             .filter((g) => g.items.length)
             .map((g) => (
               <Card key={g.key} title={<span className={g.tone}>{`${g.title} (${g.items.length})`}</span>}>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-line">
                   {g.items.map((x) => (
                     <li key={x.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
                       <TaskToggle taskId={x.id} done={false} />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium">{x.title}</div>
                         <div className="text-xs text-muted">
-                          <Link href={`/leads/${x.lead.id}`} className="font-medium text-brand-500 hover:underline">
+                          <Link href={`/leads/${x.lead.id}`} className="font-medium text-accent hover:underline">
                             {fullName(x.lead)}
                           </Link>
-                          {x.lead.phone && <> · {formatPhone(x.lead.phone)}</>} · {x.lead.stage.name}
+                          {x.lead.phone && (
+                            <>
+                              {" · "}
+                              <a href={`tel:+${x.lead.phone}`} className="font-mono hover:text-ink hover:underline">
+                                {formatPhone(x.lead.phone)}
+                              </a>
+                            </>
+                          )}{" "}
+                          · {x.lead.stage.name}
                         </div>
                       </div>
                       <time className={`shrink-0 text-xs ${g.key === "overdue" ? "font-medium text-red-600" : "text-muted"}`}>{formatDate(x.dueAt, locale, ctx.timeZone, true)}</time>

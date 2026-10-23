@@ -36,7 +36,7 @@ export function QuickDateFields({ dateName = "date", timeName = "time", formKey 
             key={n}
             type="button"
             onClick={() => setDate(quick[n])}
-            className={`rounded-full border px-2.5 py-0.5 text-xs ${date === quick[n] ? "border-brand-500 bg-brand-500/10 text-brand-500" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+            className={`rounded-full border px-2.5 py-0.5 text-xs ${date === quick[n] ? "border-brand-500 bg-brand-500/10 text-brand-500" : "border-line text-slate-600 hover:bg-slate-50"}`}
           >
             {label}
           </button>

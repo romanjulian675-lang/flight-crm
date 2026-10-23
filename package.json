@@ -11,6 +11,7 @@
     "test": "vitest run",
     "db:local": "tsx scripts/db-local.ts",
     "db:seed": "prisma db seed",
+    "db:demo-history": "tsx scripts/seed-demo-history.ts",
     "dev:all": "concurrently -n db,web -c gray,blue \"npm:db:local\" \"npm:dev\"",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",

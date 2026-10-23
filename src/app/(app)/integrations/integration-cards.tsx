@@ -81,8 +81,8 @@ function Shell({ kind, title, status, children }: { kind: keyof typeof ICONS; ti
   const { t } = useI18n();
   const Icon = ICONS[kind];
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <header className="flex flex-wrap items-start gap-3 border-b border-slate-100 px-4 py-3">
+    <section className="rounded-lg border border-line bg-white">
+      <header className="flex flex-wrap items-start gap-3 border-b border-line px-4 py-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
           <Icon size={18} />
         </span>
@@ -122,7 +122,7 @@ function SettingsForm({ integration, members, showSource = true }: { integration
   const { t } = useI18n();
   const { state, pending, formRef, onSubmit } = useActionForm(updateIntegrationAction.bind(null, integration.id));
   return (
-    <form key={JSON.stringify(integration)} ref={formRef} onSubmit={onSubmit} className="grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-4">
+    <form key={JSON.stringify(integration)} ref={formRef} onSubmit={onSubmit} className="grid gap-3 border-t border-line pt-4 sm:grid-cols-4">
       <label className="flex flex-col gap-1 sm:col-span-2">
         <span>{t.integrations.name}</span>
         <input name="name" defaultValue={integration.name} required />
@@ -291,7 +291,7 @@ export function MetaCard({ configured, pages, integration, members }: { configur
       {pages.length > 0 && (
         <div>
           <Label>{t.integrations.meta.pages}</Label>
-          <ul className={`mt-1 divide-y divide-slate-100 ${pending ? "opacity-60" : ""}`}>
+          <ul className={`mt-1 divide-y divide-line ${pending ? "opacity-60" : ""}`}>
             {pages.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
                 <span className="flex-1 font-medium">{p.pageName}</span>
@@ -332,7 +332,7 @@ export function AddSource() {
               type="button"
               disabled={pending}
               onClick={() => run(() => createIntegrationAction(k, t.integrations.kinds[k].title))}
-              className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-3 text-left hover:border-brand-500 hover:bg-sky-50/50 disabled:opacity-50"
+              className="flex items-start gap-2 rounded-lg border border-line bg-white p-3 text-left hover:border-brand-500 hover:bg-sky-50/50 disabled:opacity-50"
             >
               <Icon size={18} className="mt-0.5 shrink-0 text-brand-500" />
               <span>

@@ -19,7 +19,7 @@ export function AssignmentRules({ rules, members, fallback }: { rules: Rule[]; m
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted">{t.assignment.help}</p>
-      {rules.length === 0 && !adding && <p className="rounded-lg border border-dashed border-slate-200 px-3 py-3 text-sm text-muted">{t.assignment.empty}</p>}
+      {rules.length === 0 && !adding && <p className="rounded-lg border border-dashed border-line px-3 py-3 text-sm text-muted">{t.assignment.empty}</p>}
       <ol className="space-y-2">
         {rules.map((r, i) => (
           <RuleRow key={JSON.stringify(r)} rule={r} members={members} first={i === 0} last={i === rules.length - 1} index={i + 1} />
@@ -55,7 +55,7 @@ function RuleRow({ rule, members, first, last, index }: { rule: Rule; members: M
 
   if (editing) return <RuleForm rule={rule} members={members} onDone={() => setEditing(false)} />;
   return (
-    <li className={`flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm ${pending ? "opacity-60" : ""} ${rule.active ? "" : "opacity-60"}`}>
+    <li className={`flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white p-3 text-sm ${pending ? "opacity-60" : ""} ${rule.active ? "" : "opacity-60"}`}>
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500/10 text-xs font-semibold text-brand-500">{index}</span>
       <div className="min-w-0 flex-1">
         <div className="font-medium">{rule.name}</div>
@@ -125,7 +125,7 @@ function RuleForm({ rule, members, onDone }: { rule?: Rule; members: Member[]; o
         <legend className="mb-1 text-xs font-medium text-slate-600">{t.assignment.members}</legend>
         <div className="flex flex-wrap gap-2">
           {members.map((m) => (
-            <label key={m.id} className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-sm">
+            <label key={m.id} className="flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-1 text-sm">
               <input type="checkbox" name="memberIds" value={m.id} defaultChecked={rule?.memberIds.includes(m.id)} />
               {m.name}
               {!m.acceptsLeads && <span className="text-xs text-amber-700">({t.settings.paused})</span>}

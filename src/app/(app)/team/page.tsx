@@ -95,9 +95,9 @@ export default async function TeamPage({ searchParams }: PageProps<"/team">) {
       </div>
 
       {/* Desktop: leaderboard table */}
-      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-line bg-white lg:block">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
+          <thead className="border-b border-line bg-slate-50 text-xs text-slate-500">
             <tr>
               <th className="px-3 py-2.5 text-left font-medium" />
               {cells(totals).map((x) => (
@@ -107,7 +107,7 @@ export default async function TeamPage({ searchParams }: PageProps<"/team">) {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {rows.map((r) => (
               <tr key={r.membershipId} className="hover:bg-slate-50">
                 <td className="px-3 py-2.5">
@@ -123,7 +123,7 @@ export default async function TeamPage({ searchParams }: PageProps<"/team">) {
             ))}
           </tbody>
           {everyone && rows.length > 1 && (
-            <tfoot className="border-t-2 border-slate-200 bg-slate-50 font-medium">
+            <tfoot className="border-t-2 border-line bg-slate-50 font-medium">
               <tr>
                 <td className="px-3 py-2.5">{t.team.total}</td>
                 {cells(totals).map((x) => (

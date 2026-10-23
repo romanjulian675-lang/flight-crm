@@ -42,7 +42,7 @@ export function TaskPanel({ leadId, tasks, myId, canAssign, members }: { leadId:
         </ul>
       )}
 
-      <form ref={formRef} onSubmit={onSubmit} className="space-y-2 border-t border-slate-100 pt-3">
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-2 border-t border-line pt-3">
         <label className="flex flex-col gap-1">
           <span>{t.task.title}</span>
           <input name="title" required placeholder={t.task.titlePlaceholder} />
@@ -69,7 +69,7 @@ export function TaskPanel({ leadId, tasks, myId, canAssign, members }: { leadId:
       </form>
 
       {done.length > 0 && (
-        <ul className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
+        <ul className="mt-3 space-y-1.5 border-t border-line pt-3">
           {done.map((x) => (
             <li key={x.id} className="flex items-center gap-2.5 text-sm text-muted">
               <TaskToggle taskId={x.id} done />

@@ -4,15 +4,80 @@
   --color-brand: #0b2545;
   --color-brand-600: #13315c;
   --color-brand-500: #1d4e89;
-  --color-accent: #0ea5e9;
+  /* Accent is the brand hue: focus, the one selected state, the main data series. */
+  --color-accent: #1d4e89;
   --color-muted: #64748b;
   --color-danger: #dc2626;
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Framed sheet: a blue-grey frame (sky haze) holds the sidebar and top bar; work sits on a white sheet. */
+  --color-canvas: #eef2f6;
+  --color-frame: #eef2f6;
+  --color-frame-hover: #e2e8ef;
+  --color-frame-active: #dbe3ec;
+  --color-sheet: #ffffff;
+  --color-raised: #f5f7f9;
+  --color-line: #e5e9ee;
+  --color-ink: #10161f;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Motion: strong custom curves; UI transitions stay under 250ms. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: var(--ease-out);
+
+  --animate-dialog-in: dialog-in 200ms var(--ease-out);
+  --animate-sheet-in: sheet-in 260ms var(--ease-drawer);
+  --animate-drawer-in: drawer-in 260ms var(--ease-drawer);
+  --animate-fade-in: fade-in 150ms ease-out;
+
+  @keyframes dialog-in {
+    from { opacity: 0; transform: scale(0.96); }
+  }
+  @keyframes sheet-in {
+    from { transform: translateY(100%); }
+  }
+  @keyframes drawer-in {
+    from { transform: translateX(-100%); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
+}
+
+html {
+  color-scheme: light;
+  scrollbar-color: var(--color-slate-300) transparent;
+  background: var(--color-frame);
 }
 
 body {
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  caret-color: var(--color-brand-500);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  color: var(--color-ink);
+}
+
+/* Figures in tables and counts line up digit for digit. */
+table,
+time,
+kbd {
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+a {
+  text-underline-offset: 3px;
 }
 
 /* Field defaults live in the base layer so utility classes (w-auto, pl-8, py-1…) still override them. */
@@ -21,13 +86,12 @@ body {
   select,
   textarea {
     width: 100%;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     border: 1px solid var(--color-slate-300);
     background-color: var(--color-white);
     padding: --spacing(2) --spacing(3);
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
@@ -62,4 +126,25 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Pressable feedback: the interface heard the click. Not on keyboard-repeated actions. */
+@utility pressable {
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+/* Reduced motion keeps fades that aid comprehension and drops movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 120ms !important;
+    animation-name: fade-in !important;
+    transition-duration: 0ms !important;
+  }
 }

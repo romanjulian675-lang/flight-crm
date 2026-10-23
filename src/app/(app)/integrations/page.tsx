@@ -108,7 +108,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
         {events.length === 0 ? (
           <Empty>{t.integrations.log.empty}</Empty>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-line">
             {events.map((e) => {
               const s = (e.summary ?? {}) as { name?: string; email?: string; phone?: string };
               return (
