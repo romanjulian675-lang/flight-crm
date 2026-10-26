@@ -14,6 +14,8 @@ import { AddSource, AssignModePicker, IntegrationCard, MetaCard } from "./integr
 import { AssignmentRules } from "./assignment-rules";
 import { WhatsAppCard } from "./whatsapp-card";
 import { getAccount } from "@/modules/whatsapp";
+import { MetaDeliveries } from "./meta-deliveries";
+import { recentMetaJobs } from "@/modules/meta-jobs";
 import { listRules } from "@/modules/assignment";
 
 export const metadata = { title: "Lead sources" };
@@ -23,13 +25,14 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
   if (!canManageIntegrations(ctx)) redirect("/");
   const { t, locale } = await getI18n();
   const sp = await searchParams;
-  const [integrations, events, members, org, rules, people] = await Promise.all([
+  const [integrations, events, members, org, rules, people, deliveries] = await Promise.all([
     listIntegrations(prisma, ctx),
     recentEvents(prisma, ctx),
     listAssignable(prisma, ctx),
     prisma.organization.findUniqueOrThrow({ where: { id: ctx.orgId }, select: { assignMode: true } }),
     listRules(prisma, ctx),
     prisma.membership.findMany({ where: { orgId: ctx.orgId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, acceptsLeads: true, user: { select: { name: true } } } }),
+    recentMetaJobs(prisma, ctx),
   ]);
   const appUrl = process.env.APP_URL || process.env.BETTER_AUTH_URL || "http://localhost:3200";
   const isLocal = /localhost|127\.0\.0\.1/.test(appUrl);
@@ -103,6 +106,10 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
       ))}
 
       <AddSource />
+
+      <Card title={t.integrations.delivery.title}>
+        <MetaDeliveries jobs={deliveries.map((job) => ({ id: job.id, status: job.status, attempts: job.attempts, lastError: job.lastError, availableLabel: formatDate(job.availableAt, locale, ctx.timeZone, true), createdLabel: formatDate(job.createdAt, locale, ctx.timeZone, true) }))} />
+      </Card>
 
       <Card title={t.integrations.log.title}>
         {events.length === 0 ? (

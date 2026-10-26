@@ -82,3 +82,12 @@ export async function deleteRuleAction(id: string) {
 export async function moveRuleAction(id: string, dir: -1 | 1) {
   return runAction(async (ctx) => moveRule(prisma, ctx, id, dir));
 }
+
+export async function retryMetaJobAction(id: string) {
+  return runAction(async (ctx) => {
+    const { retryMetaJob } = await import("@/modules/meta-jobs");
+    await retryMetaJob(prisma, ctx, id);
+    const { t } = await getI18n();
+    return t.integrations.delivery.retryRequested;
+  });
+}

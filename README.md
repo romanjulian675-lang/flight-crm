@@ -17,7 +17,7 @@ npm run db:seed        # demo school with 30 leads
 
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
-Checks: `npm test` (65 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
+Checks: `npm test` (79 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
 ## What's built (phases 1–2: CRM core)
 
@@ -89,3 +89,15 @@ Lead sources → **WhatsApp Business**. Each school connects its own number (Pho
 5. Messaging: email/SMS templates + automated follow-ups, consent tracking (TCPA / CAN-SPAM).
 6. Selling it: Stripe plans, landing page, onboarding, terms & privacy.
 7. Integrations: push enrolled students to Flight Deck.
+
+## Durable Meta lead delivery
+
+Meta notifications are now saved before fetching lead data, with bounded immediate processing,
+retry/backoff, lease recovery, and manager recovery controls in Lead sources. Successful intake and
+external-ID logging commit atomically to prevent duplicates under concurrent retries. Current CF7
+name/email/message field names are also recognized.
+
+**Deployment requires the additive migration and a protected scheduled processor.** Automatic
+retries are not active until the scheduler is enabled; no Vercel cron cadence is installed by default.
+See [Meta intake operations](docs/meta-intake-operations.md) for staging, production configuration,
+smoke tests, capacity limits, and rollback steps.

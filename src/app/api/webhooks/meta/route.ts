@@ -1,5 +1,8 @@
+import { enqueueMetaNotification, drainMetaJobs } from "@/modules/meta-jobs";
 import { prisma } from "@/lib/db";
-import { handleMetaWebhook, metaConfig, verifyMetaSignature } from "@/modules/meta";
+import { metaConfig, verifyMetaSignature } from "@/modules/meta";
+
+export const maxDuration = 30;
 
 /** Meta's one-time verification handshake when the webhook is registered. */
 export async function GET(req: Request) {
@@ -23,6 +26,16 @@ export async function POST(req: Request) {
   } catch {
     return new Response("Bad request", { status: 400 });
   }
-  await handleMetaWebhook(prisma, body as Parameters<typeof handleMetaWebhook>[1]);
-  return new Response("EVENT_RECEIVED", { status: 200 });
+  try {
+    const queued = await enqueueMetaNotification(prisma, body);
+    if (queued.invalid) return new Response("Bad request", { status: 400 });
+    // Best-effort immediate work, awaited within the function lifetime. Saved jobs survive a crash.
+    // A protected scheduler drains delayed/remainder jobs independently of provider retries.
+    if (queued.ids.length) await drainMetaJobs(prisma, { ids: queued.ids });
+    if (queued.unknownPages) return new Response("Page connection unavailable", { status: 503 });
+    return new Response("EVENT_RECEIVED", { status: 200 });
+  } catch {
+    // Never acknowledge an event we could not persist.
+    return new Response("Could not accept event", { status: 503 });
+  }
 }

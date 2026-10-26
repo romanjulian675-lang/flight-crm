@@ -396,6 +396,15 @@ export const en = {
       REJECTED: "Rejected",
       ERROR: "Error",
     },
+    delivery: {
+      title: "Meta lead deliveries",
+      description: "Up to 30 Meta notifications, with unfinished deliveries first. Failed attempts stay saved for recovery.",
+      empty: "No Meta notifications received yet.",
+      PENDING: "Waiting", PROCESSING: "Processing", COMPLETED: "Saved", FAILED: "Needs attention",
+      retryRequested: "Retry checked. See the delivery status below.",
+      attempts: "Attempts", next: "Next attempt", retry: "Try again",
+      failedNote: "Check the Facebook connection and lead access, then retry.",
+    },
     publicNote: "Webhooks from Facebook, Google and Zapier need the app to be online at a public address. On this computer (localhost) use \"Send test lead\" to try it.",
   },
   embed: {

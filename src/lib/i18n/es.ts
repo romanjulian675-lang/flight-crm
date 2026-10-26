@@ -398,6 +398,15 @@ export const es: Dict = {
       REJECTED: "Rechazado",
       ERROR: "Error",
     },
+    delivery: {
+      title: "Recepción de prospectos de Meta",
+      description: "Hasta 30 notificaciones de Meta, con las entregas pendientes primero. Los intentos fallidos quedan guardados para recuperación.",
+      empty: "Aún no se han recibido notificaciones de Meta.",
+      PENDING: "En espera", PROCESSING: "Procesando", COMPLETED: "Guardado", FAILED: "Requiere atención",
+      retryRequested: "Reintento revisado. Consulta el estado de la entrega.",
+      attempts: "Intentos", next: "Próximo intento", retry: "Reintentar",
+      failedNote: "Revisa la conexión de Facebook y el acceso a prospectos; luego reintenta.",
+    },
     publicNote: "Los webhooks de Facebook, Google y Zapier necesitan que la app esté en línea en una dirección pública. En esta computadora (localhost) usa \"Enviar prospecto de prueba\".",
   },
   embed: {
