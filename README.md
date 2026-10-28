@@ -17,7 +17,7 @@ npm run db:seed        # demo school with 30 leads
 
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
-Checks: `npm test` (87 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
+Checks: `npm test` (89 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
 ## What's built (phases 1–2: CRM core)
 

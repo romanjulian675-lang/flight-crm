@@ -47,3 +47,9 @@ References: [Vercel Cron management](https://vercel.com/docs/cron-jobs/manage-cr
 ## First hosted deployment
 
 The owner confirmed there is no existing hosted CRM or database. Create a new `flight-crm` project in the selected Vercel team and a separate PostgreSQL database, keeping other projects untouched. Configure the database integration for Production only. Set `APP_URL` and `BETTER_AUTH_URL` to the final HTTPS production origin and generate distinct authentication/encryption/scheduler secrets. Do not seed demo users or records. `build:vercel` fails before migrations if required production settings are missing or point to localhost, then runs `prisma migrate deploy` and `next build`. Preview/local builds only build and never run automatic migrations.
+
+## Prisma Postgres runtime connections
+
+Keep the integration-managed DATABASE_URL on its direct host for Prisma migrations. Runtime queries use the documented pooled.db.prisma.io hostname with the same credentials, avoiding startup session options on pooled connections. Vercel instances use at most two connections each, with a ten-second connection timeout. The Free plan still has a global concurrency limit; pool sizing per instance does not remove that limit.
+
+References: https://www.prisma.io/docs/postgres/database/connecting-to-your-database and https://www.prisma.io/docs/postgres/database/connection-pooling
