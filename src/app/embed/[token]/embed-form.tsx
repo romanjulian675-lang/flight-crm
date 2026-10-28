@@ -66,7 +66,6 @@ export function EmbedForm({ token, t, programs, school, locale, sent, utm }: Pro
       {/* Honeypot: hidden from people, filled by bots. */}
       <input type="text" name="_hp" tabIndex={-1} autoComplete="off" aria-hidden="true" className="!hidden" />
       <input type="hidden" name="language" value={locale} />
-      <input type="hidden" name="source" value="website" />
       {Object.entries(utm).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
       <label className="flex flex-col gap-1">
         <span>{t.firstName}</span>

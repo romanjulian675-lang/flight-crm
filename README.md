@@ -17,7 +17,7 @@ npm run db:seed        # demo school with 30 leads
 
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
-Checks: `npm test` (79 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
+Checks: `npm test` (84 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
 ## What's built (phases 1–2: CRM core)
 
@@ -97,7 +97,17 @@ retry/backoff, lease recovery, and manager recovery controls in Lead sources. Su
 external-ID logging commit atomically to prevent duplicates under concurrent retries. Current CF7
 name/email/message field names are also recognized.
 
-**Deployment requires the additive migration and a protected scheduled processor.** Automatic
-retries are not active until the scheduler is enabled; no Vercel cron cadence is installed by default.
+**Deployment requires the additive migration and a protected scheduled processor.**
+Vercel production uses the once-per-minute schedule in `vercel.json`; configure `CRON_SECRET` before deployment. The `build:vercel` command validates production configuration and applies migrations before building. Preview/local builds never migrate automatically.
 See [Meta intake operations](docs/meta-intake-operations.md) for staging, production configuration,
 smoke tests, capacity limits, and rollback steps.
+
+
+## Campaign attribution
+
+Public forms retain `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, and `utm_term`.
+A recognized `utm_source` attributes an inquiry to Instagram, Facebook or YouTube when no
+explicit/provider source is supplied. Unknown sources use the integration default. Campaign
+and video details remain in the inquiry timeline, including repeat submissions, without
+replacing the original contact source. Adding tracked links to public channels remains a
+separate activation step after hosting and end-to-end testing.

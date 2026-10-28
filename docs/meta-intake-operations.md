@@ -13,8 +13,8 @@ The Lead sources page shows unfinished deliveries first (up to 30 total), attemp
 1. Deploy initially to an isolated preview/staging database. Apply `npm run db:migrate` using that environment's database, then build/test. Do not run local demo seed scripts on production.
 2. Back up production, apply the additive migration `20261026223000_meta_lead_jobs`, then deploy the application. No existing rows are changed by this migration.
 3. Set a strong random `CRON_SECRET` as a **server-only Production environment variable**. Keep existing Meta and encryption secrets. Do not paste secrets into issues or URLs.
-4. Enable a production scheduler to call `GET /api/jobs/meta` with `Authorization: Bearer <CRON_SECRET>`. Vercel Cron sends this header when `CRON_SECRET` is configured. Confirm the Vercel plan supports the chosen cadence before adding a `crons` entry to `vercel.json`. A once-per-minute schedule is an initial low-volume choice, not a throughput guarantee. No schedule is installed by this PR because the project's plan and existing scheduler configuration are unknown.
-5. Example configuration to merge into the deployment config **after confirming cadence/plan**, not an instruction to overwrite unrelated config:
+4. Enable a production scheduler to call `GET /api/jobs/meta` with `Authorization: Bearer <CRON_SECRET>`. Vercel Cron sends this header when `CRON_SECRET` is configured. The selected Vercel team is on Pro. `vercel.json` now defines a once-per-minute production schedule, an initial low-volume choice rather than a throughput guarantee.
+5. The repository deployment configuration includes:
 
    ```json
    { "crons": [{ "path": "/api/jobs/meta", "schedule": "* * * * *" }] }
@@ -43,3 +43,7 @@ Disable the scheduler and restore the previous app build if necessary. Leave the
 Run `npm run typecheck`, `npm run lint`, `npm test` with a dedicated local test database, and a production build. Tests include retry/backoff, concurrent workers, expired leases, attempt exhaustion, tenant/role boundaries, signed malformed payloads, scheduler authorization, concurrent intake deduplication and current CF7 fields.
 
 References: [Vercel Cron management](https://vercel.com/docs/cron-jobs/manage-cron-jobs), [Cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing).
+
+## First hosted deployment
+
+The owner confirmed there is no existing hosted CRM or database. Create a new `flight-crm` project in the selected Vercel team and a separate PostgreSQL database, keeping other projects untouched. Configure the database integration for Production only. Set `APP_URL` and `BETTER_AUTH_URL` to the final HTTPS production origin and generate distinct authentication/encryption/scheduler secrets. Do not seed demo users or records. `build:vercel` fails before migrations if required production settings are missing or point to localhost, then runs `prisma migrate deploy` and `next build`. Preview/local builds only build and never run automatic migrations.

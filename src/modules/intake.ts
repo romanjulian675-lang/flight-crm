@@ -153,6 +153,9 @@ export function normalizeFields(raw: RawFields): Normalized {
 function noteFor(n: Normalized, via: string, extraNote?: string | null) {
   const lines: string[] = [];
   if (n.message) lines.push(n.message);
+  for (const [label, value] of [["utm_source", n.utmSource], ["utm_medium", n.utmMedium], ["utm_campaign", n.utmCampaign]]) {
+    if (value) lines.push(`${label}: ${value}`);
+  }
   if (n.extra.length) lines.push(...n.extra.map(([k, v]) => `${k}: ${v}`));
   if (n.invalid.length) lines.push(...n.invalid.map(([k, v]) => `${k} (unrecognized): ${v}`));
   if (extraNote) lines.push(extraNote);
@@ -213,7 +216,7 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
     email: n.email,
     phone: n.phone,
     program: n.program,
-    source: opts.source ?? n.source ?? integration.defaultSource,
+    source: opts.source ?? n.source ?? parseSource(n.utmSource ?? "") ?? integration.defaultSource,
   } satisfies Prisma.InputJsonValue;
 
   if (!n.firstName && !n.email && !n.phone) {
