@@ -51,6 +51,8 @@ describe("normalizeFields", () => {
   });
 
   it("maps programs and sources loosely", () => {
+    expect(normalizeFields({ program: "other" }).program).toBe("OTHER");
+    expect(normalizeFields({ program: "otro" }).program).toBe("OTHER");
     expect(normalizeFields({ program: "I want to be an airline pilot" }).program).toBe("CAREER");
     expect(normalizeFields({ program: "IFR rating" }).program).toBe("INSTRUMENT");
     expect(normalizeFields({ program: "vuelo de descubrimiento" }).program).toBe("DISCOVERY");

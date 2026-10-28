@@ -63,6 +63,7 @@ function text(v: unknown): string {
 export function parseProgram(raw: string): Program | null {
   const s = raw.toLowerCase();
   if (!s) return null;
+  if (/^(other|otro|not sure|no s[eé])$/.test(s.trim())) return "OTHER";
   if (/discover|intro|demo|descubr|prueba/.test(s)) return "DISCOVERY";
   if (/cfii?\b|instructor/.test(s)) return "CFI";
   if (/career|airline|zero|hero|profesional|carrera|aerol/.test(s)) return "CAREER";
