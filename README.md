@@ -17,7 +17,7 @@ npm run db:seed        # demo school with 30 leads
 
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
-Checks: `npm test` (84 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
+Checks: `npm test` (87 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
 ## What's built (phases 1–2: CRM core)
 
@@ -104,6 +104,8 @@ smoke tests, capacity limits, and rollback steps.
 
 
 ## Campaign attribution
+
+Lead sources → Website form includes a tracked inquiry link builder for Instagram, Facebook, YouTube and Google ads, with optional campaign and video/post identifiers.
 
 Public forms retain `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, and `utm_term`.
 A recognized `utm_source` attributes an inquiry to Instagram, Facebook or YouTube when no

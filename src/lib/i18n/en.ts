@@ -330,6 +330,14 @@ export const en = {
     roleHelp: "Owners: everything incl. billing & settings. Managers: all leads, assign, invite agents. Agents: their own leads.",
   },
   integrations: {
+    campaignLinks: {
+      title: "Create a tracked inquiry link",
+      help: "Use these links in your social profiles, video descriptions or Google ads to see which channel brings inquiries.",
+      channel: "Channel",
+      campaign: "Campaign name (optional)",
+      content: "Video ID or post name (optional)",
+      note: "Copy the link into the selected channel. This opens the inquiry form; it does not connect your social inbox or publish anything.",
+    },
     title: "Lead sources",
     subtitle: "Connect your ads, website and other accounts. New leads land on the board automatically, get an owner and a \"contact now\" task.",
     assignTitle: "Who gets new automatic leads?",

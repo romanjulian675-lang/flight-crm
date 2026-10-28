@@ -332,6 +332,14 @@ export const es: Dict = {
     roleHelp: "Dueños: todo, incluida facturación y configuración. Gerentes: todos los prospectos, asignar, invitar agentes. Agentes: sus propios prospectos.",
   },
   integrations: {
+    campaignLinks: {
+      title: "Crear un enlace de consulta con seguimiento",
+      help: "Usa estos enlaces en tus perfiles, descripciones de videos o anuncios de Google para saber de dónde llegan las consultas.",
+      channel: "Canal",
+      campaign: "Nombre de campaña (opcional)",
+      content: "ID del video o nombre de publicación (opcional)",
+      note: "Copia el enlace en el canal seleccionado. Abre el formulario de consulta; no conecta tu bandeja social ni publica contenido.",
+    },
     title: "Fuentes de prospectos",
     subtitle: "Conecta tus anuncios, sitio web y otras cuentas. Los prospectos nuevos llegan solos al embudo, con responsable y una tarea de \"contactar ahora\".",
     assignTitle: "¿Quién recibe los prospectos automáticos?",
