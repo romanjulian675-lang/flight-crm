@@ -1,4 +1,5 @@
 import { enqueueMetaNotification, drainMetaJobs } from "@/modules/meta-jobs";
+import { receiveSocialMessages } from "@/modules/social-messages";
 import { prisma } from "@/lib/db";
 import { metaConfig, verifyMetaSignature } from "@/modules/meta";
 
@@ -17,6 +18,7 @@ export async function GET(req: Request) {
 /** Lead notifications. Signed with the app secret; anything unsigned is refused. */
 export async function POST(req: Request) {
   const raw = await req.text();
+  if (Buffer.byteLength(raw) > 1_000_000) return new Response("Payload too large", { status: 413 });
   if (!metaConfig().configured || !verifyMetaSignature(raw, req.headers.get("x-hub-signature-256"))) {
     return new Response("Invalid signature", { status: 401 });
   }
@@ -27,6 +29,12 @@ export async function POST(req: Request) {
     return new Response("Bad request", { status: 400 });
   }
   try {
+    const entries = (body as { entry?: unknown })?.entry;
+    if (Array.isArray(entries) && entries.some(e => e && typeof e === "object" && "messaging" in e)) {
+      const messages = await receiveSocialMessages(prisma, body);
+      if (messages.invalid) return new Response("Bad request", { status: 400 });
+      if (messages.unavailable) return new Response("Messaging connection unavailable", { status: 503 });
+    }
     const queued = await enqueueMetaNotification(prisma, body);
     if (queued.invalid) return new Response("Bad request", { status: 400 });
     // Best-effort immediate work, awaited within the function lifetime. Saved jobs survive a crash.

@@ -125,6 +125,8 @@ model Organization {
   metaLeadJobs     MetaLeadJob[]
   assignmentRules  AssignmentRule[]
   whatsappAccounts WhatsAppAccount[]
+  socialConversations SocialConversation[]
+  socialMessages SocialMessage[]
   whatsappMessages WhatsAppMessage[]
 }
 
@@ -299,6 +301,7 @@ model Lead {
   activities       Activity[]
   tasks            Task[]
   intakeEvents     IntakeEvent[]
+  socialConversations SocialConversation[]
   whatsappMessages WhatsAppMessage[]
 
   @@index([orgId, stageId, position])
@@ -449,6 +452,10 @@ model MetaPage {
   integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   pageId         String       @unique
   pageName       String
+  instagramId    String?      @unique
+  messengerEnabled Boolean    @default(false)
+  instagramEnabled Boolean    @default(false)
+  conversations  SocialConversation[]
   /// AES-256-GCM encrypted page access token (src/lib/crypto.ts).
   accessTokenEnc String
   subscribed     Boolean      @default(false)
@@ -585,4 +592,49 @@ enum MetaJobStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+// Messenger and Instagram scoped sender IDs are identities, never phone numbers.
+enum SocialChannel {
+  MESSENGER
+  INSTAGRAM
+}
+
+model SocialConversation {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pageId String @db.Uuid
+  page MetaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel SocialChannel
+  senderId String
+  lastMessageAt DateTime @db.Timestamptz(3)
+  lastInboundAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  messages SocialMessage[]
+  @@unique([pageId, channel, senderId])
+  @@index([orgId, lastMessageAt])
+}
+
+model SocialMessage {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  conversationId String @db.Uuid
+  conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  providerMessageId String?
+  requestId String?
+  direction MessageDirection @default(IN)
+  status MessageStatus @default(RECEIVED)
+  error String?
+  body String?
+  attachmentTypes String[]
+  receivedAt DateTime @db.Timestamptz(3)
+  readAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@unique([conversationId, providerMessageId])
+  @@unique([conversationId, requestId])
+  @@index([orgId, readAt])
 }

@@ -7,18 +7,19 @@ import { META_STATE_COOKIE, metaConfig, metaLoginUrl } from "@/modules/meta";
 
 
 /** Start "Connect Facebook": send the manager to Meta's login with a one-time state value. */
-export async function GET() {
+export async function GET(req: Request) {
   const ctx = await getAccessContext();
   if (!ctx) redirect("/login");
   if (!canManageIntegrations(ctx)) redirect("/integrations");
   if (!metaConfig().configured) redirect("/integrations?meta=not_configured");
+  const messaging = new URL(req.url).searchParams.get("messages") === "1";
   const state = randomBytes(18).toString("base64url");
-  (await cookies()).set(META_STATE_COOKIE, `${state}.${ctx.orgId}`, {
+  (await cookies()).set(META_STATE_COOKIE, `${state}.${ctx.orgId}.${messaging ? "messages" : "leads"}`, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/api/integrations/meta",
     maxAge: 600,
   });
-  redirect(metaLoginUrl(state));
+  redirect(metaLoginUrl(state, messaging));
 }

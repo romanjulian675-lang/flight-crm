@@ -66,6 +66,15 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
         members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       />
 
+      <Card title={locale === "es" ? "Mensajes de Facebook e Instagram" : "Facebook & Instagram messages"}>
+        <p className="text-sm text-muted">{locale === "es" ? "Recibe mensajes nuevos como prospectos y responde desde el CRM dentro de 24 horas. Meta debe aprobar los permisos para mensajes de clientes. No importa conversaciones antiguas." : "Receive new messages as leads and reply from the CRM within 24 hours. Meta must approve messaging permissions for customer conversations. Existing conversation history is not imported."}</p>
+        <div className="mt-3 flex flex-wrap gap-4 text-sm">
+          {metaConfig().configured && <Link className="text-blue-700 underline" href="/api/integrations/meta/connect?messages=1">{locale === "es" ? "Conectar / actualizar permisos de mensajes" : "Connect / refresh messaging permissions"}</Link>}
+          <Link className="text-blue-700 underline" href="/messages">{locale === "es" ? "Abrir conversaciones" : "Open conversations"}</Link>
+        </div>
+        <ul className="mt-3 space-y-2 text-sm">{meta?.metaPages.map(p => <li key={p.id}>{p.pageName} · Messenger: {p.messengerEnabled ? (locale === "es" ? "Conectado" : "Connected") : (locale === "es" ? "Sin conectar" : "Not connected")} · Instagram: {p.instagramEnabled ? (locale === "es" ? "Conectado" : "Connected") : (locale === "es" ? "Sin conectar" : "Not connected")}</li>)}</ul>
+      </Card>
+
       <WhatsAppCard
         account={
           wa

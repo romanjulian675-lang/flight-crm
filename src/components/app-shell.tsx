@@ -69,6 +69,7 @@ export function AppShell({ me, org, orgs, canAssign, canManage, members, waUnrea
     { href: "/pipeline", label: t.nav.pipeline, icon: Columns3 },
     { href: "/reports", label: t.nav.reports, icon: ChartNoAxesColumn },
     ...(waUnread !== null ? [{ href: "/inbox", label: t.nav.inbox, icon: MessageCircle, badge: waUnread }] : []),
+    { href: "/messages", label: locale === "es" ? "Messenger e Instagram" : "Messenger & Instagram", icon: MessageCircle },
     { href: "/leads", label: t.nav.leads, icon: Users },
     { href: "/tasks", label: t.nav.tasks, icon: CheckSquare },
     { href: "/team", label: canManage ? t.nav.team : t.nav.myStats, icon: BarChart3 },
