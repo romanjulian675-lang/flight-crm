@@ -22,4 +22,8 @@ Email content is generic and includes only the authenticated CRM lead link; it o
 
 Integration tests cover owner-only configuration, school isolation, disabled-by-default behavior, new-vs-merged intake, first-vs-subsequent social messages, concurrent workers, provider acceptance, stable retry keys/content, the deduplication deadline, missing provider configuration, cancellation, and lead deletion. Tests mock all email requests and use only the isolated local test database.
 
-Live sending remains blocked until provider account/domain verification, Production-only credentials, enablement and a two-recipient test are complete.
+## Production verification — October 29, 2026
+
+The owner approved DNS setup, a domain-restricted sending key, Production-only credential storage, deployment, enabling the two recipients and the synthetic test. Domain notify.cgflightacademy.com and all three DNS records are Verified; receiving remains off. Key scope is Sending access for that subdomain. The school’s Microsoft 365 MX/root SPF/DMARC are unchanged.
+
+Production deployment 9EVa9YU43r5tZ1sCqV4Hfm5DVkqe is Ready from 30b89eb9428c64efe87a8953970b20f1bd0e894b. Owner settings show the email service configured and alerts enabled for exactly the two requested recipients. Test lead 961278fa-6c09-495a-bd4e-10c3bfcd7761 triggered one alert, recorded SENT in the CRM. Resend receipt 01a18811-3122-7f29-bc1f-fa87aa6f42e0 shows separate Delivered events for both recipients at 10:29 AM America/New_York. Delivery means mail-server acceptance, not human reading. The synthetic lead was closed Lost with a verification reason; no follow-ups or customer outreach remain.
