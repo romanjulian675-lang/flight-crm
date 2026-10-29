@@ -30,7 +30,7 @@ const sections = [
   ],
   [
     "p",
-    "Page access credentials are stored encrypted on the CRM server. Required app secrets are stored in production hosting settings. The integration uses HTTPS and verifies Meta’s signature on incoming webhook requests."
+    "When the academy enables new-lead email alerts, Resend sends authorized staff a generic notification containing a link that requires CRM sign-in. The alert does not include lead contact details or message text. Resend processes the sender and recipient email addresses, generic notification and CRM link.\n\nPage access credentials are stored encrypted on the CRM server. Required app secrets are stored in production hosting settings. The integration uses HTTPS and verifies Meta’s signature on incoming webhook requests."
   ],
   [
     "h2",
@@ -63,7 +63,7 @@ export default function Page() {
     <main className="mx-auto max-w-3xl px-6 py-16 text-slate-800">
       <a href="https://cgflightacademy.com" className="text-sm font-semibold text-blue-800">CG Flight Academy</a>
       <h1 className="mt-6 text-3xl font-semibold tracking-tight">Messaging Privacy Notice</h1>
-      <p className="mt-3 text-sm text-slate-500">Updated October 28, 2026</p>
+      <p className="mt-3 text-sm text-slate-500">Updated October 29, 2026</p>
       <article className="mt-10 space-y-5 leading-7">
         {sections.map(([tag, text], index) => tag === "h2"
           ? <h2 key={index} className="pt-5 text-xl font-semibold">{text}</h2>
