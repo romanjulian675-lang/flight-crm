@@ -18,7 +18,7 @@ const sections = [
   ],
   [
     "p",
-    "The current integration receives new messages after connection. It does not import previous conversation history or download attachment files. Staff can view attachments in Meta Business Suite. It does not send automatic replies or bulk marketing messages."
+    "The integration receives new messages after connection, including copies of school replies when Meta provides them. Authorized staff can recover recent text history for an existing connected conversation; recovery is limited to the messages Meta makes available and does not import an entire historic inbox. Verified school replies can move a new inquiry to Contacted, with the evidence recorded in its timeline. Staff confirm consultation bookings and their follow-up times. The CRM does not download attachment files; staff can view them in Meta Business Suite. It does not send automatic replies or bulk marketing messages."
   ],
   [
     "h2",

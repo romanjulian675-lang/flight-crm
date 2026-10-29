@@ -4,6 +4,7 @@ import { decryptSecret } from "@/lib/crypto";
 import { invalid, notFound } from "@/lib/errors";
 import { leadScope, type AccessContext } from "@/modules/access";
 import { pickOwner } from "@/modules/assignment";
+import { recordVerifiedContact } from "@/modules/pipeline-progress";
 import { insertLead, leadInput } from "@/modules/leads";
 
 const id = z.string().min(1).max(200);
@@ -25,9 +26,12 @@ export async function receiveSocialMessages(db: Db, body: unknown) {
   let unavailable = 0, saved = 0;
   for (const entry of parsed.data.entry) {
     for (const item of entry.messaging ?? []) {
-      if (!item.message || item.message.is_echo || item.sender.id === entry.id) continue;
+      if (!item.message) continue;
+      const outgoing = item.sender.id === entry.id;
+      // Echoes must originate from the signed business asset, never from an arbitrary sender.
+      if (item.message.is_echo && !outgoing) continue;
       // The recipient must match the business asset named by the signed envelope.
-      if (item.recipient.id !== entry.id) { unavailable++; continue; }
+      if ((!outgoing && item.recipient.id !== entry.id) || (outgoing && item.recipient.id === entry.id)) { unavailable++; continue; }
       const page = await db.metaPage.findFirst({ where: channel === "MESSENGER" ? { pageId: entry.id } : { instagramId: entry.id }, include: { integration: true, org: { select: { locale: true } } } });
       if (!page || !page.integration.active || !(channel === "MESSENGER" ? page.messengerEnabled : page.instagramEnabled)) { unavailable++; continue; }
       const timestamp = new Date(item.timestamp);
@@ -39,8 +43,12 @@ export async function receiveSocialMessages(db: Db, body: unknown) {
       saved += await db.$transaction(async tx => {
         // Serialize by school: conversation, lead, task and message commit exactly once together.
         await tx.$queryRaw`SELECT "id" FROM "Organization" WHERE "id" = ${page.orgId}::uuid FOR UPDATE`;
-        let conversation = await tx.socialConversation.findUnique({ where: { pageId_channel_senderId: { pageId: page.id, channel, senderId: item.sender.id } } });
-        if (conversation && await tx.socialMessage.findUnique({ where: { conversationId_providerMessageId: { conversationId: conversation.id, providerMessageId: message.mid } } })) return 0;
+        let conversation = await tx.socialConversation.findUnique({ where: { pageId_channel_senderId: { pageId: page.id, channel, senderId: outgoing ? item.recipient.id : item.sender.id } } });
+        if (conversation && await tx.socialMessage.findUnique({ where: { conversationId_providerMessageId: { conversationId: conversation.id, providerMessageId: message.mid } } })) {
+          if (outgoing) await recordVerifiedContact(tx, page.orgId, conversation.leadId, timestamp, { source: "META_HISTORY", messageId: message.mid });
+          return 0;
+        }
+        if (!conversation && outgoing) return 0; // Do not create leads from unsolicited outbound messages.
         if (!conversation) {
           const source = channel === "INSTAGRAM" ? "INSTAGRAM" : "FACEBOOK";
           const language = page.org.locale === "es" ? "es" : "en";
@@ -51,9 +59,10 @@ export async function receiveSocialMessages(db: Db, body: unknown) {
           conversation = await tx.socialConversation.create({ data: { orgId: page.orgId, pageId: page.id, channel, senderId: item.sender.id, leadId: lead.id, lastMessageAt: timestamp, lastInboundAt: timestamp } });
           await tx.task.create({ data: { orgId: page.orgId, leadId: lead.id, assigneeId: ownerId, title: language === "es" ? "Responder nuevo mensaje" : "Reply to new message", dueAt: new Date() } });
         }
-        await tx.socialMessage.create({ data: { orgId: page.orgId, conversationId: conversation.id, providerMessageId: message.mid, body: text, attachmentTypes: types, receivedAt: timestamp } });
-        await tx.socialConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: timestamp > conversation.lastMessageAt ? timestamp : conversation.lastMessageAt, lastInboundAt: timestamp > conversation.lastInboundAt ? timestamp : conversation.lastInboundAt } });
-        await tx.activity.create({ data: { orgId: page.orgId, leadId: conversation.leadId, type: "NOTE", body: `[${label}] ${text ?? `[${types.join(", ") || "Unsupported message"}]`}`.slice(0, 5000), meta: { socialConversationId: conversation.id, direction: "IN" } } });
+        await tx.socialMessage.create({ data: { orgId: page.orgId, conversationId: conversation.id, providerMessageId: message.mid, body: text, direction: outgoing ? "OUT" : "IN", status: outgoing ? "SENT" : "RECEIVED", attachmentTypes: types, receivedAt: timestamp } });
+        await tx.socialConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: timestamp > conversation.lastMessageAt ? timestamp : conversation.lastMessageAt, ...(!outgoing ? { lastInboundAt: timestamp > conversation.lastInboundAt ? timestamp : conversation.lastInboundAt } : {}) } });
+        if (outgoing) await recordVerifiedContact(tx, page.orgId, conversation.leadId, timestamp, { source: "META_ECHO", messageId: message.mid });
+        await tx.activity.create({ data: { orgId: page.orgId, leadId: conversation.leadId, type: "NOTE", body: `[${label}] ${text ?? `[${types.join(", ") || "Unsupported message"}]`}`.slice(0, 5000), meta: { socialConversationId: conversation.id, direction: outgoing ? "OUT" : "IN" } } });
         return 1;
       });
     }
@@ -63,7 +72,7 @@ export async function receiveSocialMessages(db: Db, body: unknown) {
 
 export function socialInbox(db: Db, ctx: AccessContext) {
   return db.socialConversation.findMany({ where: { orgId: ctx.orgId, lead: leadScope(ctx) }, orderBy: { lastMessageAt: "desc" }, take: 100,
-    include: { lead: { select: { id: true, firstName: true, lastName: true } }, messages: { orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }], take: 1 }, _count: { select: { messages: { where: { direction: "IN", readAt: null } } } } } });
+    include: { lead: { select: { id: true, firstName: true, lastName: true, stage: { select: { name: true } } } }, messages: { orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }], take: 1 }, _count: { select: { messages: { where: { direction: "IN", readAt: null } } } } } });
 }
 export async function socialConversation(db: Db, ctx: AccessContext, conversationId: string) {
   const conversation = await db.socialConversation.findFirst({ where: { id: conversationId, orgId: ctx.orgId, lead: leadScope(ctx) }, include: { lead: true, page: { select: { pageName: true, messengerEnabled: true, instagramEnabled: true } }, messages: { orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }], take: 100 } } });
@@ -99,9 +108,14 @@ export async function sendSocialReply(db: Db, ctx: AccessContext, conversationId
     const result = await response.json() as { message_id?: string; error?: unknown };
     if (!response.ok || result.error || !result.message_id) throw new Error("Send not confirmed");
     await db.$transaction(async tx => {
-      await tx.socialMessage.update({ where: { id: outgoing.id }, data: { status: "SENT", providerMessageId: result.message_id } });
+      await tx.$queryRaw`SELECT "id" FROM "Organization" WHERE "id" = ${ctx.orgId}::uuid FOR UPDATE`;
+      const echo = await tx.socialMessage.findUnique({ where: { conversationId_providerMessageId: { conversationId, providerMessageId: result.message_id! } } });
+      if (echo && echo.id !== outgoing.id) {
+        await tx.socialMessage.delete({ where: { id: outgoing.id } });
+        await tx.socialMessage.update({ where: { id: echo.id }, data: { requestId: data.requestId, status: "SENT" } });
+      } else await tx.socialMessage.update({ where: { id: outgoing.id }, data: { status: "SENT", providerMessageId: result.message_id } });
       await tx.socialConversation.updateMany({ where: { id: conversationId, lastMessageAt: { lt: outgoing.receivedAt } }, data: { lastMessageAt: outgoing.receivedAt } });
-      await tx.lead.update({ where: { id: conversation.leadId }, data: { lastContactAt: outgoing.receivedAt, firstContactAt: (await tx.lead.findUniqueOrThrow({ where: { id: conversation.leadId } })).firstContactAt ?? outgoing.receivedAt } });
+      await recordVerifiedContact(tx, ctx.orgId, conversation.leadId, outgoing.receivedAt, { source: "CRM_REPLY", messageId: result.message_id, actorId: ctx.membershipId });
       await tx.activity.create({ data: { orgId: ctx.orgId, leadId: conversation.leadId, actorId: ctx.membershipId, type: "NOTE", body: `[${conversation.channel === "INSTAGRAM" ? "Instagram" : "Messenger"} reply] ${data.text}`, meta: { socialConversationId: conversationId, direction: "OUT" } } });
     });
     return outgoing.id;
@@ -109,4 +123,50 @@ export async function sendSocialReply(db: Db, ctx: AccessContext, conversationId
     await db.socialMessage.update({ where: { id: outgoing.id }, data: { status: "FAILED", error: "Delivery is unconfirmed. Check Meta Business Suite before sending again." } });
     throw invalid("Delivery is unconfirmed. Check Meta Business Suite before sending again.");
   }
+}
+
+/** Owner-triggered recovery for one existing conversation; no new contacts or credentials. */
+export async function syncSocialHistory(db: Db, ctx: AccessContext, conversationId: string, f: typeof fetch = fetch) {
+  const c = await db.socialConversation.findFirst({ where: { id: conversationId, orgId: ctx.orgId, lead: leadScope(ctx) }, include: { page: { include: { integration: true } } } });
+  if (!c) throw notFound();
+  if (!c.page.integration.active || !(c.channel === "MESSENGER" ? c.page.messengerEnabled : c.page.instagramEnabled)) throw invalid("Messaging is paused.");
+  const asset = c.channel === "INSTAGRAM" ? c.page.instagramId : c.page.pageId;
+  if (!asset) throw invalid("Reconnect this channel.");
+  const base = `https://graph.facebook.com/${process.env.META_GRAPH_VERSION || "v23.0"}`;
+  const headers = { Authorization: `Bearer ${decryptSecret(c.page.accessTokenEnc)}` };
+  async function get(path: string, query: Record<string, string>) {
+    const response = await f(`${base}/${path.split("/").map(encodeURIComponent).join("/")}?${new URLSearchParams(query)}`, { headers, signal: AbortSignal.timeout(5_000) });
+    const result = await response.json();
+    if (!response.ok || result.error) throw invalid("Meta did not allow conversation history access. Live messages remain connected; check Meta permissions before trying again.");
+    return result;
+  }
+  const list = await get(`${c.page.pageId}/conversations`, { platform: c.channel === "INSTAGRAM" ? "instagram" : "messenger", user_id: c.senderId, fields: "id,participants", limit: "10" });
+  const threadSchema = z.object({ data: z.array(z.object({ id, participants: z.object({ data: z.array(z.object({ id })) }) })) });
+  const threads = threadSchema.safeParse(list);
+  if (!threads.success) throw invalid("Meta returned an unsupported conversation response.");
+  const thread = threads.data.data.find(t => t.participants.data.some(p => p.id === c.senderId) && t.participants.data.some(p => p.id === asset || p.id === c.page.pageId));
+  if (!thread) throw invalid("Meta returned no accessible history for this contact. No changes were made.");
+  const raw = await get(thread.id, { fields: "messages.limit(100){id,message,from,to,created_time}" });
+  const history = z.object({ messages: z.object({ data: z.array(z.object({ id, message: z.string().max(20000).optional(), from: z.object({ id }), to: z.object({ data: z.array(z.object({ id })) }), created_time: z.string() })) }) }).safeParse(raw);
+  if (!history.success) throw invalid("Meta returned an unsupported message response.");
+  let saved = 0;
+  for (const m of [...history.data.messages.data].reverse()) {
+    const out = m.from.id === asset || m.from.id === c.page.pageId;
+    if (out ? !m.to.data.some(p => p.id === c.senderId) : m.from.id !== c.senderId || !m.to.data.some(p => p.id === asset || p.id === c.page.pageId)) continue;
+    const timestamp = new Date(m.created_time).getTime();
+    if (!Number.isFinite(timestamp) || !m.message) continue;
+    const result = await receiveSocialMessages(db, { object: c.channel === "INSTAGRAM" ? "instagram" : "page", entry: [{ id: asset, messaging: [{ sender: { id: out ? asset : c.senderId }, recipient: { id: out ? c.senderId : asset }, timestamp, message: { mid: m.id, text: m.message, is_echo: out } }] }] });
+    saved += result.saved;
+  }
+  return { saved, returned: history.data.messages.data.length };
+}
+
+export async function syncAllSocialHistory(db: Db, ctx: AccessContext) {
+  const conversations = await db.socialConversation.findMany({ where: { orgId: ctx.orgId, lead: leadScope(ctx), page: { integration: { active: true } } }, orderBy: { lastMessageAt: "desc" }, take: 20 });
+  let saved = 0, checked = 0, unavailable = 0;
+  for (let i = 0; i < conversations.length; i += 4) {
+    const results = await Promise.allSettled(conversations.slice(i, i + 4).map(c => syncSocialHistory(db, ctx, c.id)));
+    for (const r of results) { if (r.status === "fulfilled") { saved += r.value.saved; checked++; } else unavailable++; }
+  }
+  return { saved, checked, unavailable, limited: conversations.length === 20 };
 }
