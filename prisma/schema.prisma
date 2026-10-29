@@ -127,6 +127,9 @@ model Organization {
   whatsappAccounts WhatsAppAccount[]
   socialConversations SocialConversation[]
   socialMessages SocialMessage[]
+  leadAlerts LeadAlert[]
+  leadAlertRecipients String[] @default([])
+  leadAlertEnabled Boolean @default(false)
   whatsappMessages WhatsAppMessage[]
 }
 
@@ -302,6 +305,7 @@ model Lead {
   tasks            Task[]
   intakeEvents     IntakeEvent[]
   socialConversations SocialConversation[]
+  leadAlerts LeadAlert[]
   whatsappMessages WhatsAppMessage[]
 
   @@index([orgId, stageId, position])
@@ -637,4 +641,26 @@ model SocialMessage {
   @@unique([conversationId, providerMessageId])
   @@unique([conversationId, requestId])
   @@index([orgId, readAt])
+}
+
+/// Durable new-lead notification; no contact details or message bodies are copied here.
+model LeadAlert {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId String @unique @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  recipients String[]
+  status String @default("PENDING")
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @db.Timestamptz(3)
+  leaseUntil DateTime? @db.Timestamptz(3)
+  leaseToken String?
+  firstAttemptAt DateTime? @db.Timestamptz(3)
+  providerId String?
+  lastError String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  sentAt DateTime? @db.Timestamptz(3)
+  @@index([status, availableAt])
+  @@index([orgId, createdAt])
 }

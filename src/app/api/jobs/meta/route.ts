@@ -1,8 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
+import { drainLeadAlerts } from "@/modules/lead-alerts";
 import { prisma } from "@/lib/db";
 import { drainMetaJobs } from "@/modules/meta-jobs";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 /** Vercel Cron (or another trusted scheduler), never a public drain endpoint. */
 export async function GET(req: Request) {
@@ -13,5 +14,6 @@ export async function GET(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
   const result = await drainMetaJobs(prisma);
-  return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+  const alerts = await drainLeadAlerts(prisma);
+  return Response.json({ ...result, alerts }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -3,6 +3,7 @@ import { beforeAll, beforeEach, afterEach, describe, expect, it, vi } from "vite
 import { makeSchool, prisma, resetDb } from "../helpers";
 import { encryptSecret } from "@/lib/crypto";
 import { receiveSocialMessages, socialInbox, socialConversation, readSocialConversation, sendSocialReply, SOCIAL_WINDOW_MS } from "@/modules/social-messages";
+import { deleteLead } from "@/modules/leads";
 import { POST } from "@/app/api/webhooks/meta/route";
 import { connectMetaPages, disconnectMetaPage, metaLoginUrl } from "@/modules/meta";
 
@@ -135,6 +136,22 @@ describe("Messenger and Instagram conversations", () => {
     expect(await prisma.metaPage.findUnique({ where: { id: s.page.id } })).toMatchObject({ accessTokenEnc: "", messengerEnabled: false, instagramEnabled: false, subscribed: false });
     const c = await prisma.socialConversation.findFirstOrThrow();
     await expect(sendSocialReply(prisma, s.owner, c.id, { text: "No", requestId: randomUUID() }, success)).rejects.toThrow("paused");
+  });
+  it("deletes conversation content, timeline and tasks with an owner-approved lead deletion without affecting another contact", async () => {
+    const s = await fixture();
+    await receiveSocialMessages(prisma, event());
+    await receiveSocialMessages(prisma, event("other-mid", "instagram", "ig-1", "other-sender"));
+    const c = await prisma.socialConversation.findFirstOrThrow({ where: { channel: "MESSENGER" } });
+    await sendSocialReply(prisma, s.owner, c.id, { text: "Test reply", requestId: randomUUID() }, async () => Response.json({ message_id: "deleted-out" }));
+    await expect(deleteLead(prisma, s.agent, c.leadId)).rejects.toThrow();
+    expect(await prisma.socialMessage.count({ where: { conversationId: c.id } })).toBe(2);
+    await deleteLead(prisma, s.owner, c.leadId);
+    expect(await prisma.socialConversation.findUnique({ where: { id: c.id } })).toBeNull();
+    expect(await prisma.socialMessage.count({ where: { conversationId: c.id } })).toBe(0);
+    expect(await prisma.activity.count({ where: { leadId: c.leadId } })).toBe(0);
+    expect(await prisma.task.count({ where: { leadId: c.leadId } })).toBe(0);
+    expect(await prisma.socialConversation.count()).toBe(1);
+    expect(await prisma.socialMessage.count()).toBe(1);
   });
   it("asks for messaging scopes only on the explicit messaging connection", () => {
     expect(new URL(metaLoginUrl("state")).searchParams.get("scope")).not.toContain("pages_messaging");

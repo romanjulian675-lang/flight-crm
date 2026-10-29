@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queueLeadAlert } from "@/modules/lead-alerts";
 import type { Db, Tx } from "@/lib/db";
 import { invalid, notFound } from "@/lib/errors";
 import type { ActivityType, Prisma } from "@/generated/prisma/client";
@@ -128,6 +129,7 @@ export async function insertLead(
   await tx.activity.create({ data: { orgId, leadId: lead.id, actorId: opts.actorId, type: "CREATED", meta: opts.createdMeta ?? { source: data.source } } });
   const note = opts.note?.trim();
   if (note) await tx.activity.create({ data: { orgId, leadId: lead.id, actorId: opts.actorId, type: "NOTE", body: note.slice(0, 5000) } });
+  await queueLeadAlert(tx, orgId, lead.id);
   return lead;
 }
 
