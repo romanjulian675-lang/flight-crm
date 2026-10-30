@@ -17,6 +17,8 @@ import { getAccount } from "@/modules/whatsapp";
 import { MetaDeliveries } from "./meta-deliveries";
 import { recentMetaJobs } from "@/modules/meta-jobs";
 import { listRules } from "@/modules/assignment";
+import { readQuestionnaireConfig } from "@/lib/questionnaire";
+import { QuestionnaireSettings } from "./questionnaire-settings";
 
 export const metadata = { title: "Lead sources" };
 
@@ -115,6 +117,13 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
       ))}
 
       <AddSource />
+
+      {others.filter(i => i.kind === "WEB_FORM").map(i => <QuestionnaireSettings key={`questionnaire-${i.id}`} id={i.id} token={i.token} appUrl={appUrl} config={readQuestionnaireConfig(i.config)} />)}
+
+      <Card title="Questionnaire booking emails">
+        <p className="mb-3 text-xs text-muted">Provider acceptance is not proof of inbox delivery. Check the email provider for delivery events.</p>
+        <ul className="space-y-2 text-sm">{(await prisma.prospectEmail.findMany({ where: { orgId: ctx.orgId }, orderBy: { createdAt: "desc" }, take: 10, select: { id: true, leadId: true, recipient: true, status: true, lastError: true } })).map(e => <li key={e.id}><Link className="underline" href={`/leads/${e.leadId}`}>{e.recipient}</Link> · {e.status}{e.lastError ? ` · ${e.lastError}` : ""}</li>)}</ul>
+      </Card>
 
       <Card title={t.integrations.delivery.title}>
         <MetaDeliveries jobs={deliveries.map((job) => ({ id: job.id, status: job.status, attempts: job.attempts, lastError: job.lastError, availableLabel: formatDate(job.availableAt, locale, ctx.timeZone, true), createdLabel: formatDate(job.createdAt, locale, ctx.timeZone, true) }))} />

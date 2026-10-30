@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Messaging Privacy Notice" };
+export const metadata: Metadata = { title: "Inquiry and Messaging Privacy Notice" };
 
 const sections = [
   [
@@ -33,6 +33,14 @@ const sections = [
     "When the academy enables new-lead email alerts, Resend sends authorized staff a generic notification containing a link that requires CRM sign-in. The alert does not include lead contact details or message text. Resend processes the sender and recipient email addresses, generic notification and CRM link.\n\nPage access credentials are stored encrypted on the CRM server. Required app secrets are stored in production hosting settings. The integration uses HTTPS and verifies Meta’s signature on incoming webhook requests."
   ],
   [
+    "p",
+    "The training questionnaire collects the contact details, city and country of residence, preferred language, training goal, current flying experience, desired start timeframe, questions and requested next step that you choose to provide. These answers help staff respond to your stated interests; the questionnaire does not make admissions, funding, immigration or medical eligibility decisions. Discovery-flight requests record your preferred availability and require staff confirmation."
+  ],
+  [
+    "p",
+    "When you request booking information through the questionnaire, the CRM can send a one-time discovery-flight and consultation email through Resend. Resend processes your email address, the academy sender and reply-to addresses, and the generic booking message; your questionnaire answers are not included in that email. This does not subscribe you to an ongoing marketing sequence. Microsoft Bookings handles meeting availability, the information you enter in its booking form, and calendar invitations for the academy's Outlook account. Opening a booking link does not itself create a reservation."
+  ],
+  [
     "h2",
     "Retention and requests"
   ],
@@ -62,8 +70,8 @@ export default function Page() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16 text-slate-800">
       <a href="https://cgflightacademy.com" className="text-sm font-semibold text-blue-800">CG Flight Academy</a>
-      <h1 className="mt-6 text-3xl font-semibold tracking-tight">Messaging Privacy Notice</h1>
-      <p className="mt-3 text-sm text-slate-500">Updated October 29, 2026</p>
+      <h1 className="mt-6 text-3xl font-semibold tracking-tight">Inquiry and Messaging Privacy Notice</h1>
+      <p className="mt-3 text-sm text-slate-500">Updated October 30, 2026</p>
       <article className="mt-10 space-y-5 leading-7">
         {sections.map(([tag, text], index) => tag === "h2"
           ? <h2 key={index} className="pt-5 text-xl font-semibold">{text}</h2>

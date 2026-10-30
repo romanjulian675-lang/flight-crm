@@ -8,6 +8,14 @@ import { disconnectMetaPage } from "@/modules/meta";
 import { createRule, deleteRule, moveRule, updateRule, type RuleInput } from "@/modules/assignment";
 import { ensure } from "@/modules/access";
 import type { LeadSource, Program } from "@/generated/prisma/client";
+import { configureQuestionnaire } from "@/modules/questionnaire";
+
+export async function configureQuestionnaireAction(id: string, _prev: unknown, fd: FormData) {
+  return runAction(async ctx => configureQuestionnaire(prisma, ctx, id, {
+    enabled: fd.get("enabled") === "on", meetingUrl: formString(fd, "meetingUrl"),
+    emailEnabled: fd.get("emailEnabled") === "on", replyTo: formString(fd, "replyTo"),
+  }));
+}
 
 export async function createIntegrationAction(kind: "WEB_FORM" | "WEBHOOK" | "GOOGLE_ADS", name: string) {
   return runAction(async (ctx) => {

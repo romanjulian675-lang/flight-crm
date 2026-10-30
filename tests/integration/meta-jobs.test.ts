@@ -146,7 +146,7 @@ describe("durable Meta delivery", () => {
     expect((await runJobs(new Request("http://localhost/api/jobs/meta", { headers: { Authorization: "Bearer wrong" } }))).status).toBe(401);
     const response = await runJobs(new Request("http://localhost/api/jobs/meta", { headers: { Authorization: "Bearer local-test-secret" } }));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ processed: 0, alerts: { configured: false, processed: 0 } });
+    expect(await response.json()).toEqual({ processed: 0, alerts: { configured: false, processed: 0 }, prospectEmails: { configured: false, processed: 0 } });
   });
 });
 

@@ -128,6 +128,7 @@ model Organization {
   socialConversations SocialConversation[]
   socialMessages SocialMessage[]
   leadAlerts LeadAlert[]
+  prospectEmails ProspectEmail[]
   leadAlertRecipients String[] @default([])
   leadAlertEnabled Boolean @default(false)
   whatsappMessages WhatsAppMessage[]
@@ -306,6 +307,7 @@ model Lead {
   intakeEvents     IntakeEvent[]
   socialConversations SocialConversation[]
   leadAlerts LeadAlert[]
+  prospectEmails ProspectEmail[]
   whatsappMessages WhatsAppMessage[]
 
   @@index([orgId, stageId, position])
@@ -663,4 +665,31 @@ model LeadAlert {
   sentAt DateTime? @db.Timestamptz(3)
   @@index([status, availableAt])
   @@index([orgId, createdAt])
+}
+
+/// One requested booking-information email per questionnaire submission; stable content for retries.
+model ProspectEmail {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  integrationId String @db.Uuid
+  submissionId String @unique @db.Uuid
+  recipient String
+  subject String
+  body String
+  replyTo String
+  status String @default("PENDING")
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @db.Timestamptz(3)
+  leaseUntil DateTime? @db.Timestamptz(3)
+  leaseToken String?
+  firstAttemptAt DateTime? @db.Timestamptz(3)
+  providerId String?
+  lastError String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  sentAt DateTime? @db.Timestamptz(3)
+  @@index([status, availableAt])
+  @@index([orgId, recipient, createdAt])
 }
