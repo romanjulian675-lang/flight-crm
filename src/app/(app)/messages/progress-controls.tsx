@@ -1,11 +1,12 @@
 "use client";
 import { useActionForm, ActionMessage } from "@/components/forms";
 import { buttonClass } from "@/components/ui";
-import { syncSocialHistoryAction, reconcileContactsAction, bookConsultationAction, recoverAllChatsAction } from "@/app/actions/social-messages";
+import { syncSocialHistoryAction, reconcileContactsAction, bookConsultationAction, recoverAllChatsAction, refreshSocialProfilesAction } from "@/app/actions/social-messages";
 export function ContactProgressReview() {
   const { formRef, onSubmit, pending, state } = useActionForm(reconcileContactsAction);
   const { formRef: recoverRef, onSubmit: recoverSubmit, pending: recoverPending, state: recoverState } = useActionForm(recoverAllChatsAction);
-  return <div className="space-y-3"><form ref={recoverRef} onSubmit={recoverSubmit}><button disabled={recoverPending} className={buttonClass("primary")}>{recoverPending ? "Recovering conversations…" : "Recover and review recent chats"}</button><ActionMessage state={recoverState} /></form><form ref={formRef} onSubmit={onSubmit} className="space-y-2"><button disabled={pending} className={buttonClass("secondary")}>{pending ? "Reviewing…" : "Update stages from verified replies"}</button><ActionMessage state={state} /></form></div>;
+  const { formRef: profileRef, onSubmit: profileSubmit, pending: profilePending, state: profileState } = useActionForm(refreshSocialProfilesAction);
+  return <div className="space-y-3"><form ref={profileRef} onSubmit={profileSubmit}><button disabled={profilePending} className={buttonClass("secondary")}>{profilePending ? "Refreshing names…" : "Refresh contact names / usernames"}</button><ActionMessage state={profileState} /></form><form ref={recoverRef} onSubmit={recoverSubmit}><button disabled={recoverPending} className={buttonClass("primary")}>{recoverPending ? "Recovering conversations…" : "Recover and review recent chats"}</button><ActionMessage state={recoverState} /></form><form ref={formRef} onSubmit={onSubmit} className="space-y-2"><button disabled={pending} className={buttonClass("secondary")}>{pending ? "Reviewing…" : "Update stages from verified replies"}</button><ActionMessage state={state} /></form></div>;
 }
 export function ConversationProgress({ id, stage, evidence, manager, timeZone }: { id: string; stage: string; evidence: string | null; manager: boolean; timeZone: string }) {
   const { formRef: syncRef, onSubmit: syncSubmit, pending: syncPending, state: syncState } = useActionForm(syncSocialHistoryAction.bind(null, id));

@@ -14,7 +14,7 @@ const sections = [
   ],
   [
     "p",
-    "The CRM stores the connected academy account identifiers, the sender’s platform-scoped identifier, message text, message timestamps, attachment types, read state within the CRM, and the text and send status of staff replies. It creates a lead record and follow-up task for a new social conversation. Social identifiers are not treated as phone numbers, and contacts on different channels are not automatically combined. Staff may add contact details that you provide during an inquiry."
+    "The CRM stores the connected academy account identifiers, the sender’s platform-scoped identifier and the username or display name Meta makes available, message text, message timestamps, attachment types, read state within the CRM, and the text and send status of staff replies. It creates a lead record and follow-up task for a new social conversation. Social identifiers are not treated as phone numbers, and contacts on different channels are not automatically combined. Staff may add contact details that you provide during an inquiry."
   ],
   [
     "p",
@@ -71,7 +71,7 @@ export default function Page() {
     <main className="mx-auto max-w-3xl px-6 py-16 text-slate-800">
       <a href="https://cgflightacademy.com" className="text-sm font-semibold text-blue-800">CG Flight Academy</a>
       <h1 className="mt-6 text-3xl font-semibold tracking-tight">Inquiry and Messaging Privacy Notice</h1>
-      <p className="mt-3 text-sm text-slate-500">Updated October 30, 2026</p>
+      <p className="mt-3 text-sm text-slate-500">Updated October 31, 2026</p>
       <article className="mt-10 space-y-5 leading-7">
         {sections.map(([tag, text], index) => tag === "h2"
           ? <h2 key={index} className="pt-5 text-xl font-semibold">{text}</h2>

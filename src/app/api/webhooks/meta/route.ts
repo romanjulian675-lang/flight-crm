@@ -1,3 +1,4 @@
+import { drainSocialProfiles } from "@/modules/social-profiles";
 import { enqueueMetaNotification, drainMetaJobs } from "@/modules/meta-jobs";
 import { receiveSocialMessages } from "@/modules/social-messages";
 import { prisma } from "@/lib/db";
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
       const messages = await receiveSocialMessages(prisma, body, { live: true });
       if (messages.invalid) return new Response("Bad request", { status: 400 });
       if (messages.unavailable) return new Response("Messaging connection unavailable", { status: 503 });
-      after(async () => { await drainInstagramWelcomes(prisma); });
+      after(async () => { await Promise.all([drainInstagramWelcomes(prisma), drainSocialProfiles(prisma)]); });
     }
     const queued = await enqueueMetaNotification(prisma, body);
     if (queued.invalid) return new Response("Bad request", { status: 400 });

@@ -45,3 +45,12 @@ export async function recoverAllChatsAction(_previous: unknown, _fd: FormData) {
     return `${result.checked} conversations checked; ${result.saved} messages recovered. ${result.unavailable} conversations unavailable from Meta.${result.limited ? " Only the 20 most recent conversations were checked." : ""} Recovered verified replies update the pipeline automatically.`;
   });
 }
+
+export async function refreshSocialProfilesAction(_previous: unknown, _fd: FormData) {
+  void _previous; void _fd;
+  return runAction(async ctx => {
+    const { refreshAllSocialProfiles } = await import("@/modules/social-profiles");
+    const r = await refreshAllSocialProfiles(prisma, ctx);
+    return `${r.updated} names/usernames refreshed from ${r.checked} conversations. Meta may not expose every profile. Staff-entered names are preserved.`;
+  });
+}

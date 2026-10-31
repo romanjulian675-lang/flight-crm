@@ -1,3 +1,4 @@
+import { socialTitle } from "@/modules/social-profiles";
 import { meetingEvidence } from "@/modules/pipeline-progress";
 import { isManager } from "@/modules/access";
 import { ConversationProgress } from "../progress-controls";
@@ -6,7 +7,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { getI18n } from "@/lib/i18n";
-import { formatDate, fullName } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { requirePageAccess } from "@/lib/session";
 import { socialConversation } from "@/modules/social-messages";
 import { SocialComposer } from "./composer";
@@ -20,7 +21,7 @@ export default async function ConversationPage({ params }: PageProps<"/messages/
   const open = enabled && c.replyWindowOpen;
   return <div className="mx-auto max-w-4xl space-y-4"><AutoRefresh seconds={8} />
     <Link href="/messages" className="text-sm text-blue-700 underline">{es ? "Todas las conversaciones" : "All conversations"}</Link>
-    <PageHeader title={fullName(c.lead)} subtitle={`${c.channel === "MESSENGER" ? "Facebook Messenger" : "Instagram Direct"} · ${c.page.pageName}`} />
+    <PageHeader title={socialTitle(c)} subtitle={`${c.channel === "MESSENGER" ? "Facebook Messenger" : "Instagram Direct"} · ${c.page.pageName}`} />
     <Link href={`/leads/${c.leadId}`} className="text-sm text-blue-700 underline">{es ? "Ver prospecto" : "View lead"}</Link>
     <ConversationProgress id={c.id} stage={(await prisma.pipelineStage.findUniqueOrThrow({ where: { id: c.lead.stageId } })).name} evidence={meetingEvidence(c.messages)} manager={isManager(ctx)} timeZone={ctx.timeZone} />
     <section className="overflow-hidden rounded-lg border border-line bg-white"><ol className="max-h-[55vh] space-y-3 overflow-auto bg-slate-50 p-4">{c.messages.map(m => <li key={m.id} className={`max-w-[90%] rounded-lg border border-line p-3 text-sm ${m.direction === "OUT" ? "ml-auto bg-blue-50" : "bg-white"}`}>

@@ -616,6 +616,10 @@ model SocialConversation {
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   channel SocialChannel
   senderId String
+  username String?
+  displayName String?
+  profileCheckedAt DateTime? @db.Timestamptz(3)
+  profileLeadName String?
   lastMessageAt DateTime @db.Timestamptz(3)
   lastInboundAt DateTime @db.Timestamptz(3)
   createdAt DateTime @default(now()) @db.Timestamptz(3)

@@ -1,3 +1,4 @@
+import { drainSocialProfiles } from "@/modules/social-profiles";
 import { timingSafeEqual } from "node:crypto";
 import { drainLeadAlerts } from "@/modules/lead-alerts";
 import { prisma } from "@/lib/db";
@@ -16,6 +17,6 @@ export async function GET(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
   const result = await drainMetaJobs(prisma);
-  const [alerts, prospectEmails] = await Promise.all([drainLeadAlerts(prisma), drainProspectEmails(prisma), drainInstagramWelcomes(prisma)]);
+  const [alerts, prospectEmails] = await Promise.all([drainLeadAlerts(prisma), drainProspectEmails(prisma), drainInstagramWelcomes(prisma), drainSocialProfiles(prisma)]);
   return Response.json({ ...result, alerts, prospectEmails }, { headers: { "Cache-Control": "no-store" } });
 }
