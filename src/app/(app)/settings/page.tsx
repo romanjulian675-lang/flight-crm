@@ -1,3 +1,5 @@
+import { LeadAlertForm } from "./lead-alert-form";
+import { leadAlertConfig } from "@/modules/lead-alerts";
 import { Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/format";
@@ -31,6 +33,12 @@ export default async function SettingsPage() {
           <OrgForm org={{ name: org.name, timeZone: org.timeZone, agentsSeeAll: org.agentsSeeAll, requireNextStep: org.requireNextStep }} />
         </Card>
       )}
+
+      {canOrg && <Card title={locale === "es" ? "Alertas por correo" : "New-lead email alerts"}>
+        <p className="mb-3 text-sm">{leadAlertConfig() ? (locale === "es" ? "Servicio de correo configurado." : "Email service configured.") : (locale === "es" ? "Falta conectar y verificar el remitente. Los correos aún no se envían." : "Sender setup and verification are required. Emails are not being sent yet.")}</p>
+        <LeadAlertForm enabled={org.leadAlertEnabled} recipients={org.leadAlertRecipients} es={locale === "es"} />
+        <ul className="mt-4 space-y-2 text-xs text-muted">{(await prisma.leadAlert.findMany({ where: { orgId: ctx.orgId }, orderBy: { createdAt: "desc" }, take: 10 })).map(alert => <li key={alert.id}>{formatDate(alert.createdAt, locale, ctx.timeZone, true)} · {alert.status} · {alert.recipients.join(", ")}{alert.lastError ? ` · ${alert.lastError}` : ""}</li>)}</ul>
+      </Card>}
 
       <Card title={t.settings.team}>
         <p className="mb-3 text-xs text-muted">{t.settings.roleHelp}</p>

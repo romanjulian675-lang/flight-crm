@@ -17,7 +17,7 @@ export function listIntegrations(db: Db, ctx: AccessContext) {
     where: { orgId: ctx.orgId },
     orderBy: { createdAt: "asc" },
     include: {
-      metaPages: { select: { id: true, pageName: true, subscribed: true, lastError: true } },
+      metaPages: { select: { id: true, pageName: true, messengerEnabled: true, instagramEnabled: true, subscribed: true, lastError: true } },
       _count: { select: { events: true } },
     },
   });

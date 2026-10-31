@@ -8,6 +8,19 @@ import { disconnectMetaPage } from "@/modules/meta";
 import { createRule, deleteRule, moveRule, updateRule, type RuleInput } from "@/modules/assignment";
 import { ensure } from "@/modules/access";
 import type { LeadSource, Program } from "@/generated/prisma/client";
+import { configureQuestionnaire } from "@/modules/questionnaire";
+import { configureInstagramWelcome } from "@/modules/instagram-welcome";
+
+export async function configureInstagramWelcomeAction(integrationId: string, _prev: unknown, fd: FormData) {
+  return runAction(async ctx => configureInstagramWelcome(prisma, ctx, integrationId, fd.get("enabled") === "on"));
+}
+
+export async function configureQuestionnaireAction(id: string, _prev: unknown, fd: FormData) {
+  return runAction(async ctx => configureQuestionnaire(prisma, ctx, id, {
+    enabled: fd.get("enabled") === "on", meetingUrl: formString(fd, "meetingUrl"),
+    emailEnabled: fd.get("emailEnabled") === "on", replyTo: formString(fd, "replyTo"),
+  }));
+}
 
 export async function createIntegrationAction(kind: "WEB_FORM" | "WEBHOOK" | "GOOGLE_ADS", name: string) {
   return runAction(async (ctx) => {
@@ -81,4 +94,13 @@ export async function deleteRuleAction(id: string) {
 
 export async function moveRuleAction(id: string, dir: -1 | 1) {
   return runAction(async (ctx) => moveRule(prisma, ctx, id, dir));
+}
+
+export async function retryMetaJobAction(id: string) {
+  return runAction(async (ctx) => {
+    const { retryMetaJob } = await import("@/modules/meta-jobs");
+    await retryMetaJob(prisma, ctx, id);
+    const { t } = await getI18n();
+    return t.integrations.delivery.retryRequested;
+  });
 }

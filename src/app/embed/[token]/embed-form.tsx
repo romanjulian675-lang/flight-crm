@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui";
 import type { Dict } from "@/lib/i18n/en";
 import { fmt } from "@/lib/i18n/format";
 
-const PROGRAMS = ["DISCOVERY", "PRIVATE", "INSTRUMENT", "COMMERCIAL", "CFI", "CAREER"] as const;
+const PROGRAMS = ["DISCOVERY", "PRIVATE", "INSTRUMENT", "COMMERCIAL", "CFI", "CAREER", "OTHER"] as const;
 
 type Props = {
   token: string;
@@ -66,7 +66,6 @@ export function EmbedForm({ token, t, programs, school, locale, sent, utm }: Pro
       {/* Honeypot: hidden from people, filled by bots. */}
       <input type="text" name="_hp" tabIndex={-1} autoComplete="off" aria-hidden="true" className="!hidden" />
       <input type="hidden" name="language" value={locale} />
-      <input type="hidden" name="source" value="website" />
       {Object.entries(utm).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
       <label className="flex flex-col gap-1">
         <span>{t.firstName}</span>
@@ -86,7 +85,7 @@ export function EmbedForm({ token, t, programs, school, locale, sent, utm }: Pro
       </label>
       <label className="col-span-2 flex flex-col gap-1">
         <span>{t.program}</span>
-        <select name="program" defaultValue="PRIVATE">
+        <select name="program" defaultValue="other">
           {PROGRAMS.map((p) => (
             <option key={p} value={p.toLowerCase()}>
               {programs[p]}
