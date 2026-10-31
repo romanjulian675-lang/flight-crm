@@ -17,6 +17,7 @@ import { ProgramOptions, SourceOptions } from "@/components/lead-options";
 import { Badge, buttonClass } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import { fmt } from "@/lib/i18n/format";
+import { CAMPAIGN_CHANNELS, campaignLink, type CampaignChannel } from "@/lib/campaign-links";
 
 type Member = { id: string; name: string };
 type Result = { ok: boolean; message: string; at: number } | null;
@@ -244,7 +245,40 @@ function WebFormSetup({ url, locale }: { url: string; locale: string }) {
           <ExternalLink size={13} /> {t.integrations.webForm.preview}
         </a>
       </div>
+      <CampaignLinks url={url} locale={locale} />
     </div>
+  );
+}
+
+function CampaignLinks({ url, locale }: { url: string; locale: string }) {
+  const { t } = useI18n();
+  const [channel, setChannel] = useState<CampaignChannel>("instagram");
+  const [campaign, setCampaign] = useState("");
+  const [content, setContent] = useState("");
+  const link = campaignLink(url, locale, channel, campaign, content);
+  return (
+    <details className="space-y-3 rounded-lg border border-line p-3">
+      <summary className="cursor-pointer text-sm font-semibold">{t.integrations.campaignLinks.title}</summary>
+      <p className="text-xs text-muted">{t.integrations.campaignLinks.help}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-sm">
+          <span>{t.integrations.campaignLinks.channel}</span>
+          <select value={channel} onChange={(e) => setChannel(e.target.value as CampaignChannel)}>
+            {CAMPAIGN_CHANNELS.map((source) => <option key={source} value={source}>{source === "youtube" ? "YouTube" : source[0].toUpperCase() + source.slice(1)}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span>{t.integrations.campaignLinks.campaign}</span>
+          <input value={campaign} onChange={(e) => setCampaign(e.target.value)} maxLength={120} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+          <span>{t.integrations.campaignLinks.content}</span>
+          <input value={content} onChange={(e) => setContent(e.target.value)} maxLength={120} />
+        </label>
+      </div>
+      <CopyField value={link} />
+      <p className="text-xs text-muted">{t.integrations.campaignLinks.note}</p>
+    </details>
   );
 }
 

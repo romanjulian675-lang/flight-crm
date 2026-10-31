@@ -72,3 +72,10 @@ export async function applySuggestedPlaybooksAction() {
 export async function setAcceptsLeadsAction(membershipId: string, on: boolean) {
   return runAction(async (ctx) => setAcceptsLeads(prisma, ctx, membershipId, on));
 }
+
+export async function updateLeadAlertsAction(_previous: unknown, fd: FormData) {
+  return runAction(async ctx => {
+    const { updateLeadAlerts } = await import("@/modules/lead-alerts");
+    await updateLeadAlerts(prisma, ctx, { enabled: formBool(fd, "enabled"), recipients: formString(fd, "recipients").split(/[,;\n]+/) });
+  });
+}

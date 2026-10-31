@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "db:local": "tsx scripts/db-local.ts",
     "db:seed": "prisma db seed",
@@ -15,7 +15,8 @@
     "dev:all": "concurrently -n db,web -c gray,blue \"npm:db:local\" \"npm:dev\"",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:migration": "prisma migrate dev --create-only"
+    "db:migration": "prisma migrate dev --create-only",
+    "build:vercel": "tsx scripts/build-vercel.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

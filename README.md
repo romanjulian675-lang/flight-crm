@@ -17,7 +17,7 @@ npm run db:seed        # demo school with 30 leads
 
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
-Checks: `npm test` (65 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
+Checks: `npm test` (89 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
 ## What's built (phases 1–2: CRM core)
 
@@ -89,3 +89,27 @@ Lead sources → **WhatsApp Business**. Each school connects its own number (Pho
 5. Messaging: email/SMS templates + automated follow-ups, consent tracking (TCPA / CAN-SPAM).
 6. Selling it: Stripe plans, landing page, onboarding, terms & privacy.
 7. Integrations: push enrolled students to Flight Deck.
+
+## Durable Meta lead delivery
+
+Meta notifications are now saved before fetching lead data, with bounded immediate processing,
+retry/backoff, lease recovery, and manager recovery controls in Lead sources. Successful intake and
+external-ID logging commit atomically to prevent duplicates under concurrent retries. Current CF7
+name/email/message field names are also recognized.
+
+**Deployment requires the additive migration and a protected scheduled processor.**
+Vercel production uses the once-per-minute schedule in `vercel.json`; configure `CRON_SECRET` before deployment. The `build:vercel` command validates production configuration and applies migrations before building. Preview/local builds never migrate automatically.
+See [Meta intake operations](docs/meta-intake-operations.md) for staging, production configuration,
+smoke tests, capacity limits, and rollback steps.
+
+
+## Campaign attribution
+
+Lead sources → Website form includes a tracked inquiry link builder for Instagram, Facebook, YouTube and Google ads, with optional campaign and video/post identifiers.
+
+Public forms retain `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, and `utm_term`.
+A recognized `utm_source` attributes an inquiry to Instagram, Facebook or YouTube when no
+explicit/provider source is supplied. Unknown sources use the integration default. Campaign
+and video details remain in the inquiry timeline, including repeat submissions, without
+replacing the original contact source. Adding tracked links to public channels remains a
+separate activation step after hosting and end-to-end testing.

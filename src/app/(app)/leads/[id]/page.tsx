@@ -30,6 +30,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
     listMembers(prisma, ctx),
     prisma.organization.findUniqueOrThrow({ where: { id: ctx.orgId }, select: { requireNextStep: true } }),
   ]);
+  const social = await prisma.socialConversation.findMany({ where: { orgId: ctx.orgId, leadId: lead.id }, select: { id: true, channel: true } });
   const wa = await getAccount(prisma, ctx.orgId);
   const waLive = !!wa && wa.integration.active && !!wa.accessTokenEnc && !!lead.phone;
   const chat = waLive ? await getConversation(prisma, ctx, lead.id) : null;
@@ -46,6 +47,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         <ArrowLeft size={14} /> {t.nav.pipeline}
       </Link>
 
+      {social.length > 0 && <div className="mb-3 flex gap-3 text-sm">{social.map(c => <Link className="text-blue-700 underline" key={c.id} href={`/messages/${c.id}`}>{c.channel === "MESSENGER" ? "Messenger" : "Instagram"} · {locale === "es" ? "Abrir conversación" : "Open conversation"}</Link>)}</div>}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">

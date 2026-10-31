@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { recordVerifiedContact } from "@/modules/pipeline-progress";
+import { queueLeadAlert } from "@/modules/lead-alerts";
 import type { Db, Tx } from "@/lib/db";
 import { invalid, notFound } from "@/lib/errors";
 import type { ActivityType, Prisma } from "@/generated/prisma/client";
@@ -128,6 +130,7 @@ export async function insertLead(
   await tx.activity.create({ data: { orgId, leadId: lead.id, actorId: opts.actorId, type: "CREATED", meta: opts.createdMeta ?? { source: data.source } } });
   const note = opts.note?.trim();
   if (note) await tx.activity.create({ data: { orgId, leadId: lead.id, actorId: opts.actorId, type: "NOTE", body: note.slice(0, 5000) } });
+  await queueLeadAlert(tx, orgId, lead.id);
   return lead;
 }
 
@@ -237,7 +240,7 @@ export async function logActivity(db: Db, ctx: AccessContext, leadId: string, in
 
   await db.$transaction(async (tx) => {
     await tx.activity.create({ data: { orgId: ctx.orgId, leadId, actorId: ctx.membershipId, type: data.type, body: data.body || null, meta } });
-    if (touched) await tx.lead.update({ where: { id: leadId }, data: { lastContactAt: now, ...(lead.firstContactAt ? {} : { firstContactAt: now }) } });
+    if (touched) await recordVerifiedContact(tx, ctx.orgId, leadId, now, { source: "STAFF_ACTIVITY", actorId: ctx.membershipId });
     if (data.followUp) {
       await tx.task.create({
         data: {

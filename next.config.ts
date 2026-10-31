@@ -17,13 +17,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // The lead form at /embed/* is meant to be framed by schools' websites; nothing else is.
-        source: "/((?!embed/).*)",
+        // Public forms may be framed; authenticated CRM pages must never be framed.
+        source: "/((?!embed/|apply/).*)",
         headers: [{ key: "X-Frame-Options", value: "DENY" }],
       },
       {
         source: "/embed/:path*",
         headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }],
+      },
+      {
+        source: "/apply/:path*",
+        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self' https://cgflightacademy.com https://www.cgflightacademy.com" }],
       },
       {
         source: "/:path*",

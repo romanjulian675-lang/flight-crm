@@ -41,7 +41,7 @@ export default async function EmbedPage({ params, searchParams }: PageProps<"/em
               school={org.name}
               locale={locale}
               sent={pick("sent") === "1"}
-              utm={{ utm_source: pick("utm_source"), utm_medium: pick("utm_medium"), utm_campaign: pick("utm_campaign") }}
+              utm={{ utm_source: pick("utm_source"), utm_medium: pick("utm_medium"), utm_campaign: pick("utm_campaign"), utm_content: pick("utm_content"), utm_term: pick("utm_term") }}
             />
           </>
         )}

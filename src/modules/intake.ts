@@ -40,10 +40,10 @@ const key = (k: string) => k.toLowerCase().replace(/[^a-z0-9]/g, "");
 const ALIASES: Record<string, keyof Omit<Normalized, "extra" | "invalid"> | "fullName" | "ignore"> = {
   firstname: "firstName", fname: "firstName", nombre: "firstName", givenname: "firstName",
   lastname: "lastName", lname: "lastName", surname: "lastName", apellido: "lastName", apellidos: "lastName", familyname: "lastName",
-  name: "fullName", fullname: "fullName", yourname: "fullName", nombrecompleto: "fullName", contactname: "fullName",
-  email: "email", emailaddress: "email", mail: "email", correo: "email", correoelectronico: "email", youremail: "email",
+  name: "fullName", fullname: "fullName", yourname: "fullName", textyourname: "fullName", nombrecompleto: "fullName", contactname: "fullName",
+  email: "email", emailaddress: "email", mail: "email", correo: "email", correoelectronico: "email", youremail: "email", emailyouremail: "email",
   phone: "phone", phonenumber: "phone", mobile: "phone", mobilephone: "phone", cell: "phone", cellphone: "phone", tel: "phone", telephone: "phone", telefono: "phone", celular: "phone", whatsapp: "phone", yourphone: "phone",
-  message: "message", comments: "message", comment: "message", notes: "message", note: "message", question: "message", questions: "message", mensaje: "message", comentarios: "message", howcanwehelp: "message", details: "message",
+  message: "message", textareamessage: "message", yourmessage: "message", comments: "message", comment: "message", notes: "message", note: "message", question: "message", questions: "message", mensaje: "message", comentarios: "message", howcanwehelp: "message", details: "message",
   program: "program", interest: "program", interestedin: "program", course: "program", training: "program", programa: "program", trainingtype: "program", certificate: "program",
   source: "source", leadsource: "source", platform: "source", origen: "source",
   language: "language", lang: "language", idioma: "language", preferredlanguage: "language",
@@ -63,6 +63,7 @@ function text(v: unknown): string {
 export function parseProgram(raw: string): Program | null {
   const s = raw.toLowerCase();
   if (!s) return null;
+  if (/^(other|otro|not sure|no s[eé])$/.test(s.trim())) return "OTHER";
   if (/discover|intro|demo|descubr|prueba/.test(s)) return "DISCOVERY";
   if (/cfii?\b|instructor/.test(s)) return "CFI";
   if (/career|airline|zero|hero|profesional|carrera|aerol/.test(s)) return "CAREER";
@@ -153,6 +154,9 @@ export function normalizeFields(raw: RawFields): Normalized {
 function noteFor(n: Normalized, via: string, extraNote?: string | null) {
   const lines: string[] = [];
   if (n.message) lines.push(n.message);
+  for (const [label, value] of [["utm_source", n.utmSource], ["utm_medium", n.utmMedium], ["utm_campaign", n.utmCampaign]]) {
+    if (value) lines.push(`${label}: ${value}`);
+  }
   if (n.extra.length) lines.push(...n.extra.map(([k, v]) => `${k}: ${v}`));
   if (n.invalid.length) lines.push(...n.invalid.map(([k, v]) => `${k} (unrecognized): ${v}`));
   if (extraNote) lines.push(extraNote);
@@ -199,13 +203,13 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
   if (!integration.active) {
     return { status: "REJECTED", leadId: null, eventId: await log("REJECTED", { error: "Integration is turned off." }), error: "inactive" };
   }
-  const recent = await db.intakeEvent.count({ where: { integrationId: integration.id, createdAt: { gt: new Date(now.getTime() - 60_000) } } });
-  if (recent >= RATE_LIMIT_PER_MINUTE) throw new RateLimitedError();
-
+  // Successful retries must remain harmless even when a source is currently rate-limited.
   if (opts.externalId) {
     const seen = await db.intakeEvent.findUnique({ where: { integrationId_externalId: { integrationId: integration.id, externalId: opts.externalId } } });
     if (seen) return { status: "DUPLICATE", leadId: seen.leadId, eventId: seen.id };
   }
+  const recent = await db.intakeEvent.count({ where: { integrationId: integration.id, createdAt: { gt: new Date(now.getTime() - 60_000) } } });
+  if (recent >= RATE_LIMIT_PER_MINUTE) throw new RateLimitedError();
 
   const n = normalizeFields(raw);
   const summary = {
@@ -213,7 +217,7 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
     email: n.email,
     phone: n.phone,
     program: n.program,
-    source: opts.source ?? n.source ?? integration.defaultSource,
+    source: opts.source ?? n.source ?? parseSource(n.utmSource ?? "") ?? integration.defaultSource,
   } satisfies Prisma.InputJsonValue;
 
   if (!n.firstName && !n.email && !n.phone) {
@@ -226,7 +230,19 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
   const note = noteFor(n, via, opts.extraNote);
 
   try {
-    const result = await db.$transaction(async (tx) => {
+    return await db.$transaction(async (tx) => {
+      // Serialize intake per school across all sources. Matching, mutation and external-ID logging
+      // must commit together, including when two providers submit the same contact concurrently.
+      await tx.$queryRaw`SELECT "id" FROM "Organization" WHERE "id" = ${integration.orgId}::uuid FOR UPDATE`;
+      if (opts.externalId) {
+        const seen = await tx.intakeEvent.findUnique({ where: { integrationId_externalId: { integrationId: integration.id, externalId: opts.externalId } } });
+        if (seen) return { status: "DUPLICATE" as const, leadId: seen.leadId, eventId: seen.id };
+      }
+      const finish = async (status: "CREATED" | "MERGED", leadId: string) => {
+        const event = await tx.intakeEvent.create({ data: { orgId: integration.orgId, integrationId: integration.id, status, leadId, summary, externalId: opts.externalId ?? null } });
+        await tx.integration.update({ where: { id: integration.id }, data: { lastEventAt: now } });
+        return { status, leadId, eventId: event.id };
+      };
       const or: Prisma.LeadWhereInput[] = [];
       if (n.email) or.push({ email: n.email });
       if (n.phone) or.push({ phone: n.phone });
@@ -239,7 +255,7 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
           data: { orgId: integration.orgId, leadId: existing.id, type: "FORM_SUBMITTED", body: note, meta: { via, source: summary.source } },
         });
         await addContactTask(tx, integration.orgId, existing.id, existing.ownerId, titles.again, now);
-        return { status: "MERGED" as const, leadId: existing.id };
+        return finish("MERGED", existing.id);
       }
 
       const data = leadInput.parse({
@@ -265,10 +281,8 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
       const lead = await insertLead(tx, integration.orgId, data, { ownerId, actorId: null, note, createdMeta: { source: data.source, via } });
       if (ownerId) await tx.activity.create({ data: { orgId: integration.orgId, leadId: lead.id, type: "ASSIGNED", meta: { from: null, to: ownerId, auto: true } } });
       await addContactTask(tx, integration.orgId, lead.id, ownerId, titles.new, now);
-      return { status: "CREATED" as const, leadId: lead.id };
-    });
-    const eventId = await log(result.status, { leadId: result.leadId, summary, externalId: opts.externalId });
-    return { ...result, eventId };
+      return finish("CREATED", lead.id);
+    }, { timeout: 10_000 });
   } catch (e) {
     const err = e instanceof Error ? e.message.slice(0, 300) : "Unknown error";
     console.error("[intake] failed:", err);

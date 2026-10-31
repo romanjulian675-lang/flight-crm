@@ -17,6 +17,7 @@ import { ingest } from "@/modules/intake";
  * "leadgen", value: { leadgen_id, page_id, form_id, ad_id } }] }] } and we fetch the lead.
  */
 
+export const META_MESSAGE_SCOPES = ["pages_messaging", "instagram_basic", "instagram_manage_messages"];
 export const META_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_metadata", "leads_retrieval", "business_management"];
 
 export type Fetch = typeof fetch;
@@ -37,9 +38,9 @@ const graphBase = () => `https://graph.facebook.com/${metaConfig().version}`;
 
 export const metaRedirectUri = () => `${metaConfig().appUrl}/api/integrations/meta/callback`;
 
-export function metaLoginUrl(state: string) {
+export function metaLoginUrl(state: string, messaging = false) {
   const c = metaConfig();
-  const p = new URLSearchParams({ client_id: c.appId, redirect_uri: metaRedirectUri(), state, scope: META_SCOPES.join(","), response_type: "code" });
+  const p = new URLSearchParams({ client_id: c.appId, redirect_uri: metaRedirectUri(), state, scope: [...META_SCOPES, ...(messaging ? META_MESSAGE_SCOPES : [])].join(","), response_type: "code" });
   return `https://www.facebook.com/${c.version}/dialog/oauth?${p}`;
 }
 
@@ -60,13 +61,19 @@ async function graph<T>(f: Fetch, path: string, params: Record<string, string>, 
 }
 
 /** OAuth callback: exchange the code, list the user's pages, store + subscribe them for this school. */
-export async function connectMetaPages(db: Db, orgId: string, code: string, f: Fetch = fetch) {
+export async function connectMetaPages(db: Db, orgId: string, code: string, f: Fetch = fetch, messaging = false) {
   const c = metaConfig();
   const short = await graph<{ access_token: string }>(f, "oauth/access_token", { client_id: c.appId, client_secret: c.appSecret, redirect_uri: metaRedirectUri(), code });
   // Page tokens obtained from a long-lived user token don't expire.
   const long = await graph<{ access_token: string }>(f, "oauth/access_token", { grant_type: "fb_exchange_token", client_id: c.appId, client_secret: c.appSecret, fb_exchange_token: short.access_token });
-  const pages = await graph<{ data: { id: string; name: string; access_token: string }[] }>(f, "me/accounts", { fields: "id,name,access_token", limit: "100", access_token: long.access_token });
+  const pages = await graph<{ data: { id: string; name: string; access_token: string; instagram_business_account?: { id: string } }[] }>(f, "me/accounts", { fields: messaging ? "id,name,access_token,instagram_business_account" : "id,name,access_token", limit: "100", access_token: long.access_token });
 
+  let granted = new Set<string>();
+  if (messaging) {
+    const permissions = await graph<{ data: { permission: string; status: string }[] }>(f, "me/permissions", { access_token: long.access_token });
+    granted = new Set(permissions.data.filter(p => p.status === "granted").map(p => p.permission));
+    if (!granted.has("pages_messaging") || !granted.has("pages_manage_metadata")) throw new Error("Approve Messenger messaging and Page webhook permissions before connecting messages.");
+  }
   let integration = await db.integration.findFirst({ where: { orgId, kind: "META" } });
   integration ??= await db.integration.create({ data: { orgId, kind: "META", name: "Facebook & Instagram Lead Ads", token: newToken(), defaultSource: "FACEBOOK" } });
 
@@ -78,17 +85,27 @@ export async function connectMetaPages(db: Db, orgId: string, code: string, f: F
       continue;
     }
     let subscribed = false;
+    let messengerEnabled = messaging ? granted.has("pages_messaging") : taken?.messengerEnabled ?? false;
+    let instagramEnabled = messaging ? false : taken?.instagramEnabled ?? false;
+    const instagramId = messaging ? p.instagram_business_account?.id ?? null : taken?.instagramId ?? null;
     let lastError: string | null = null;
     try {
-      await graph(f, `${p.id}/subscribed_apps`, { subscribed_fields: "leadgen", access_token: p.access_token }, "POST");
+      await graph(f, `${p.id}/subscribed_apps`, { subscribed_fields: ["leadgen", ...(messengerEnabled ? ["messages"] : [])].join(","), access_token: p.access_token }, "POST");
       subscribed = true;
     } catch (e) {
       lastError = e instanceof Error ? e.message : "Subscription failed";
+      messengerEnabled = false;
+    }
+    if (messaging && instagramId && granted.has("instagram_manage_messages") && granted.has("instagram_basic")) {
+      try {
+        await graph(f, `${instagramId}/subscribed_apps`, { subscribed_fields: "messages", access_token: p.access_token }, "POST");
+        instagramEnabled = true;
+      } catch { lastError = "Instagram messaging subscription failed. Check the linked professional account and messaging access."; }
     }
     await db.metaPage.upsert({
       where: { pageId: p.id },
-      create: { orgId, integrationId: integration.id, pageId: p.id, pageName: p.name, accessTokenEnc: encryptSecret(p.access_token), subscribed, lastError },
-      update: { integrationId: integration.id, pageName: p.name, accessTokenEnc: encryptSecret(p.access_token), subscribed, lastError },
+      create: { orgId, integrationId: integration.id, pageId: p.id, pageName: p.name, accessTokenEnc: encryptSecret(p.access_token), subscribed, lastError, instagramId, messengerEnabled, instagramEnabled },
+      update: { integrationId: integration.id, pageName: p.name, accessTokenEnc: encryptSecret(p.access_token), subscribed, lastError, instagramId, messengerEnabled, instagramEnabled },
     });
     results.push({ pageName: p.name, ok: subscribed, error: lastError ?? undefined });
   }
@@ -103,7 +120,12 @@ export async function disconnectMetaPage(db: Db, orgId: string, metaPageId: stri
   } catch {
     // Already removed on Meta's side, or the token was revoked: deleting our copy is what matters.
   }
-  await db.metaPage.delete({ where: { id: page.id } });
+  // Keep conversation history when disconnecting; clear access and pause both channels.
+  if (await db.socialConversation.count({ where: { pageId: page.id, orgId } })) {
+    await db.metaPage.update({ where: { id: page.id }, data: { accessTokenEnc: "", subscribed: false, messengerEnabled: false, instagramEnabled: false, lastError: null } });
+  } else {
+    await db.metaPage.delete({ where: { id: page.id } });
+  }
 }
 
 type LeadgenChange = { field?: string; value?: { leadgen_id?: string; page_id?: string; form_id?: string; ad_id?: string } };

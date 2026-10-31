@@ -1,0 +1,1 @@
+{"preferredVersions": {"php": "8.3", "wp": "latest"}, "steps": [{"step": "runPHP", "code": "<?php require '/tests/test.php';"}]}

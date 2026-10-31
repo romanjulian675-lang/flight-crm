@@ -51,6 +51,8 @@ describe("normalizeFields", () => {
   });
 
   it("maps programs and sources loosely", () => {
+    expect(normalizeFields({ program: "other" }).program).toBe("OTHER");
+    expect(normalizeFields({ program: "otro" }).program).toBe("OTHER");
     expect(normalizeFields({ program: "I want to be an airline pilot" }).program).toBe("CAREER");
     expect(normalizeFields({ program: "IFR rating" }).program).toBe("INSTRUMENT");
     expect(normalizeFields({ program: "vuelo de descubrimiento" }).program).toBe("DISCOVERY");
@@ -266,5 +268,50 @@ describe("Meta lead ads", () => {
     expect(note.body).toContain("asap");
     // Meta retries the same delivery: no second lead.
     expect((await handleMetaWebhook(prisma, body, f))[0].status).toBe("DUPLICATE");
+  });
+});
+
+
+describe("campaign funnel attribution", () => {
+  it("assigns tagged website inquiries to their originating channels and keeps video details", async () => {
+    const { owner } = await makeSchool();
+    const integration = await createIntegration(prisma, owner, { kind: "WEB_FORM", name: "Website inquiries" });
+    for (const [source, expected] of [["instagram", "INSTAGRAM"], ["facebook", "FACEBOOK"], ["youtube", "YOUTUBE"]]) {
+      const result = await ingest(prisma, integration, { name: "Test Visitor", email: `${source}@example.com`, utm_source: source, utm_medium: "social", utm_campaign: "course-launch", utm_content: "video-123" });
+      expect(result.status).toBe("CREATED");
+      const lead = await prisma.lead.findUniqueOrThrow({ where: { id: result.leadId! } });
+      expect(lead).toMatchObject({ source: expected, utmSource: source, utmCampaign: "course-launch" });
+      const activity = await prisma.activity.findFirst({ where: { leadId: lead.id, body: { contains: "video-123" } } });
+      expect(activity?.body).toContain("utm_source: " + source);
+    }
+  });
+
+  it("keeps provider and explicit sources authoritative, with website fallback for unknown tags", async () => {
+    const { owner } = await makeSchool();
+    const integration = await createIntegration(prisma, owner, { kind: "WEB_FORM", name: "Website inquiries" });
+    for (const [i, fields, opts, expected] of [
+      [0, { source: "referral", utm_source: "youtube" }, {}, "REFERRAL"],
+      [1, { source: "referral", utm_source: "youtube" }, { source: "FACEBOOK" as const }, "FACEBOOK"],
+      [2, { utm_source: "unrecognized-campaign" }, {}, "WEBSITE"],
+    ] as const) {
+      const result = await ingest(prisma, integration, { name: "Test Visitor", email: `precedence${i}@example.com`, ...fields }, opts);
+      const lead = await prisma.lead.findUniqueOrThrow({ where: { id: result.leadId! } });
+      expect(lead.source).toBe(expected);
+    }
+  });
+
+  it("preserves repeat inquiry campaign details without replacing the contact's original source", async () => {
+    const { owner } = await makeSchool();
+    const integration = await createIntegration(prisma, owner, { kind: "WEB_FORM", name: "Website inquiries" });
+    const first = await ingest(prisma, integration, { email: "repeat@example.com", utm_source: "instagram" });
+    const repeat = await ingest(prisma, integration, { email: "repeat@example.com", utm_source: "youtube", utm_campaign: "ground-school", utm_content: "video-456" });
+    expect(repeat.status).toBe("MERGED");
+    expect(repeat.leadId).toBe(first.leadId);
+    const lead = await prisma.lead.findUniqueOrThrow({ where: { id: first.leadId! } });
+    expect(lead.source).toBe("INSTAGRAM");
+    const activity = await prisma.activity.findFirstOrThrow({ where: { leadId: lead.id, type: "FORM_SUBMITTED" } });
+    expect(activity.body).toContain("utm_source: youtube");
+    expect(activity.body).toContain("utm_campaign: ground-school");
+    expect(activity.body).toContain("video-456");
   });
 });

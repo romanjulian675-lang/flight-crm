@@ -122,8 +122,15 @@ model Organization {
   integrations     Integration[]
   intakeEvents     IntakeEvent[]
   metaPages        MetaPage[]
+  metaLeadJobs     MetaLeadJob[]
   assignmentRules  AssignmentRule[]
   whatsappAccounts WhatsAppAccount[]
+  socialConversations SocialConversation[]
+  socialMessages SocialMessage[]
+  leadAlerts LeadAlert[]
+  prospectEmails ProspectEmail[]
+  leadAlertRecipients String[] @default([])
+  leadAlertEnabled Boolean @default(false)
   whatsappMessages WhatsAppMessage[]
 }
 
@@ -298,6 +305,9 @@ model Lead {
   activities       Activity[]
   tasks            Task[]
   intakeEvents     IntakeEvent[]
+  socialConversations SocialConversation[]
+  leadAlerts LeadAlert[]
+  prospectEmails ProspectEmail[]
   whatsappMessages WhatsAppMessage[]
 
   @@index([orgId, stageId, position])
@@ -401,6 +411,7 @@ model Integration {
   createdAt      DateTime         @default(now()) @db.Timestamptz(3)
   events         IntakeEvent[]
   metaPages      MetaPage[]
+  metaLeadJobs   MetaLeadJob[]
   whatsapp       WhatsAppAccount?
 
   @@index([orgId])
@@ -447,6 +458,10 @@ model MetaPage {
   integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   pageId         String       @unique
   pageName       String
+  instagramId    String?      @unique
+  messengerEnabled Boolean    @default(false)
+  instagramEnabled Boolean    @default(false)
+  conversations  SocialConversation[]
   /// AES-256-GCM encrypted page access token (src/lib/crypto.ts).
   accessTokenEnc String
   subscribed     Boolean      @default(false)
@@ -552,4 +567,146 @@ model WhatsAppMessage {
 
   @@index([orgId, leadId, createdAt])
   @@index([orgId, direction, readAt])
+}
+
+/// Durable, tenant-scoped Meta notifications. Only provider IDs are stored, not access tokens.
+model MetaLeadJob {
+  id            String       @id @default(uuid()) @db.Uuid
+  orgId         String       @db.Uuid
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  integrationId String       @db.Uuid
+  integration   Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  pageId        String
+  leadgenId     String
+  status        MetaJobStatus @default(PENDING)
+  attempts      Int          @default(0)
+  availableAt   DateTime     @default(now()) @db.Timestamptz(3)
+  leaseToken    String?
+  leaseUntil    DateTime?    @db.Timestamptz(3)
+  lastError     String?
+  completedAt   DateTime?    @db.Timestamptz(3)
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@unique([integrationId, leadgenId])
+  @@index([status, availableAt])
+  @@index([orgId, createdAt])
+}
+
+enum MetaJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// Messenger and Instagram scoped sender IDs are identities, never phone numbers.
+enum SocialChannel {
+  MESSENGER
+  INSTAGRAM
+}
+
+model SocialConversation {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pageId String @db.Uuid
+  page MetaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel SocialChannel
+  senderId String
+  lastMessageAt DateTime @db.Timestamptz(3)
+  lastInboundAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  messages SocialMessage[]
+  instagramWelcome InstagramWelcome?
+  @@unique([pageId, channel, senderId])
+  @@index([orgId, lastMessageAt])
+}
+
+/// A welcome is eligible only on a new live Instagram conversation, never on resuming a thread.
+model InstagramWelcome {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  conversationId String @unique @db.Uuid
+  conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  initialMessageId String
+  initialAt DateTime @db.Timestamptz(3)
+  status String @default("PENDING")
+  lastError String?
+  attemptedAt DateTime? @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([status, createdAt])
+}
+
+model SocialMessage {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  conversationId String @db.Uuid
+  conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  providerMessageId String?
+  requestId String?
+  direction MessageDirection @default(IN)
+  status MessageStatus @default(RECEIVED)
+  error String?
+  body String?
+  attachmentTypes String[]
+  receivedAt DateTime @db.Timestamptz(3)
+  readAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@unique([conversationId, providerMessageId])
+  @@unique([conversationId, requestId])
+  @@index([orgId, readAt])
+}
+
+/// Durable new-lead notification; no contact details or message bodies are copied here.
+model LeadAlert {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId String @unique @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  recipients String[]
+  status String @default("PENDING")
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @db.Timestamptz(3)
+  leaseUntil DateTime? @db.Timestamptz(3)
+  leaseToken String?
+  firstAttemptAt DateTime? @db.Timestamptz(3)
+  providerId String?
+  lastError String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  sentAt DateTime? @db.Timestamptz(3)
+  @@index([status, availableAt])
+  @@index([orgId, createdAt])
+}
+
+/// One requested booking-information email per questionnaire submission; stable content for retries.
+model ProspectEmail {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  integrationId String @db.Uuid
+  submissionId String @unique @db.Uuid
+  recipient String
+  subject String
+  body String
+  replyTo String
+  status String @default("PENDING")
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @db.Timestamptz(3)
+  leaseUntil DateTime? @db.Timestamptz(3)
+  leaseToken String?
+  firstAttemptAt DateTime? @db.Timestamptz(3)
+  providerId String?
+  lastError String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  sentAt DateTime? @db.Timestamptz(3)
+  @@index([status, availableAt])
+  @@index([orgId, recipient, createdAt])
 }
