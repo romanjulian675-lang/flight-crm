@@ -6,6 +6,7 @@ import { leadScope, type AccessContext } from "@/modules/access";
 import { pickOwner } from "@/modules/assignment";
 import { recordVerifiedContact } from "@/modules/pipeline-progress";
 import { insertLead, leadInput } from "@/modules/leads";
+import { instagramWelcomeEnabled, isWelcomeTrigger, queueInstagramWelcome } from "@/modules/instagram-welcome";
 
 const id = z.string().min(1).max(200);
 const event = z.object({
@@ -18,7 +19,7 @@ const envelope = z.object({ object: z.string(), entry: z.array(z.object({ id, me
 export const SOCIAL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /** Persist before acknowledging. No external API is called while processing incoming messages. */
-export async function receiveSocialMessages(db: Db, body: unknown) {
+export async function receiveSocialMessages(db: Db, body: unknown, options: { live?: boolean } = {}) {
   const parsed = envelope.safeParse(body);
   if (!parsed.success) return { invalid: true, unavailable: 0, saved: 0 };
   const channel = parsed.data.object === "page" ? "MESSENGER" : parsed.data.object === "instagram" ? "INSTAGRAM" : null;
@@ -57,6 +58,9 @@ export async function receiveSocialMessages(db: Db, body: unknown) {
           const ownerId = fixed?.id ?? await pickOwner(tx, page.orgId, traits);
           const lead = await insertLead(tx, page.orgId, leadInput.parse({ firstName: `${label} contact ${item.sender.id.slice(-6)}`, source, sourceDetail: `${label} · ${page.pageName}`, program: traits.program, language }), { ownerId, actorId: null });
           conversation = await tx.socialConversation.create({ data: { orgId: page.orgId, pageId: page.id, channel, senderId: item.sender.id, leadId: lead.id, lastMessageAt: timestamp, lastInboundAt: timestamp } });
+          if (options.live && channel === "INSTAGRAM" && instagramWelcomeEnabled(page.integration.config) && isWelcomeTrigger(text) && Date.now() - +timestamp < 5 * 60_000) {
+            await queueInstagramWelcome(tx, { orgId: page.orgId, conversationId: conversation.id, initialMessageId: message.mid, initialAt: timestamp });
+          }
           await tx.task.create({ data: { orgId: page.orgId, leadId: lead.id, assigneeId: ownerId, title: language === "es" ? "Responder nuevo mensaje" : "Reply to new message", dueAt: new Date() } });
         }
         await tx.socialMessage.create({ data: { orgId: page.orgId, conversationId: conversation.id, providerMessageId: message.mid, body: text, direction: outgoing ? "OUT" : "IN", status: outgoing ? "SENT" : "RECEIVED", attachmentTypes: types, receivedAt: timestamp } });

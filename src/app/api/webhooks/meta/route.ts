@@ -2,6 +2,8 @@ import { enqueueMetaNotification, drainMetaJobs } from "@/modules/meta-jobs";
 import { receiveSocialMessages } from "@/modules/social-messages";
 import { prisma } from "@/lib/db";
 import { metaConfig, verifyMetaSignature } from "@/modules/meta";
+import { after } from "next/server";
+import { drainInstagramWelcomes } from "@/modules/instagram-welcome";
 
 export const maxDuration = 30;
 
@@ -31,9 +33,10 @@ export async function POST(req: Request) {
   try {
     const entries = (body as { entry?: unknown })?.entry;
     if (Array.isArray(entries) && entries.some(e => e && typeof e === "object" && "messaging" in e)) {
-      const messages = await receiveSocialMessages(prisma, body);
+      const messages = await receiveSocialMessages(prisma, body, { live: true });
       if (messages.invalid) return new Response("Bad request", { status: 400 });
       if (messages.unavailable) return new Response("Messaging connection unavailable", { status: 503 });
+      after(async () => { await drainInstagramWelcomes(prisma); });
     }
     const queued = await enqueueMetaNotification(prisma, body);
     if (queued.invalid) return new Response("Bad request", { status: 400 });

@@ -9,6 +9,11 @@ import { createRule, deleteRule, moveRule, updateRule, type RuleInput } from "@/
 import { ensure } from "@/modules/access";
 import type { LeadSource, Program } from "@/generated/prisma/client";
 import { configureQuestionnaire } from "@/modules/questionnaire";
+import { configureInstagramWelcome } from "@/modules/instagram-welcome";
+
+export async function configureInstagramWelcomeAction(integrationId: string, _prev: unknown, fd: FormData) {
+  return runAction(async ctx => configureInstagramWelcome(prisma, ctx, integrationId, fd.get("enabled") === "on"));
+}
 
 export async function configureQuestionnaireAction(id: string, _prev: unknown, fd: FormData) {
   return runAction(async ctx => configureQuestionnaire(prisma, ctx, id, {

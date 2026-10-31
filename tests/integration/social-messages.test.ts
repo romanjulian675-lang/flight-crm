@@ -7,6 +7,8 @@ import { deleteLead } from "@/modules/leads";
 import { POST } from "@/app/api/webhooks/meta/route";
 import { connectMetaPages, disconnectMetaPage, metaLoginUrl } from "@/modules/meta";
 
+vi.mock("next/server", () => ({ after: vi.fn() }));
+
 beforeAll(() => {
   process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
   process.env.META_APP_ID = "test"; process.env.META_APP_SECRET = "secret"; process.env.META_VERIFY_TOKEN = "verify";

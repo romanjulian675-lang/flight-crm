@@ -18,7 +18,7 @@ const sections = [
   ],
   [
     "p",
-    "The integration receives new messages after connection, including copies of school replies when Meta provides them. Authorized staff can recover recent text history for an existing connected conversation; recovery is limited to the messages Meta makes available and does not import an entire historic inbox. Verified school replies can move a new inquiry to Contacted, with the evidence recorded in its timeline. Staff confirm consultation bookings and their follow-up times. The CRM does not download attachment files; staff can view them in Meta Business Suite. It does not send automatic replies or bulk marketing messages."
+    "The integration receives new messages after connection, including copies of school replies when Meta provides them. Authorized staff can recover recent text history for an existing connected conversation; recovery is limited to the messages Meta makes available and does not import an entire historic inbox. Verified school replies can move a new inquiry to Contacted, with the evidence recorded in its timeline. Staff confirm consultation bookings and their follow-up times. The CRM does not download attachment files; staff can view them in Meta Business Suite. It does not send bulk marketing messages. When enabled, a one-time Instagram welcome responds to an opening greeting or pilot inquiry only for a new CRM conversation after checking Meta's available history. Existing conversations and resumed chats do not receive that welcome; unverified history and uncertain sends are not automatically retried."
   ],
   [
     "h2",

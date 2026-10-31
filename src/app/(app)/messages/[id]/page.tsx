@@ -30,6 +30,6 @@ export default async function ConversationPage({ params }: PageProps<"/messages/
       <p className="mt-2 text-xs text-muted">{formatDate(m.receivedAt, locale, ctx.timeZone, true)} {m.direction === "OUT" ? ` · ${m.status}` : ""}</p>
       {m.error && <p className="mt-1 text-xs text-red-700">{es ? "Entrega sin confirmar. Revisa Meta Business Suite antes de enviar de nuevo." : m.error}</p>}
     </li>)}</ol><SocialComposer id={c.id} es={es} open={open} unread={c.messages.some(m => m.direction === "IN" && !m.readAt)} /></section>
-    <p className="text-xs text-muted">{es ? "Se muestran los 100 mensajes más recientes. Los archivos adjuntos se abren en Meta Business Suite. Las respuestas automáticas están desactivadas." : "Showing the latest 100 messages. Open attachments in Meta Business Suite. Automatic replies are off."}</p>
+    <p className="text-xs text-muted">{es ? "Se muestran los 100 mensajes más recientes. Los archivos adjuntos se abren en Meta Business Suite. El saludo opcional solo aplica a contactos nuevos de Instagram; no se reinicia en conversaciones existentes." : "Showing the latest 100 messages. Open attachments in Meta Business Suite. The optional Instagram welcome applies only to new contacts; it never restarts an existing conversation."}</p>
   </div>;
 }

@@ -19,6 +19,8 @@ import { recentMetaJobs } from "@/modules/meta-jobs";
 import { listRules } from "@/modules/assignment";
 import { readQuestionnaireConfig } from "@/lib/questionnaire";
 import { QuestionnaireSettings } from "./questionnaire-settings";
+import { InstagramWelcomeSettings } from "./instagram-welcome-settings";
+import { instagramWelcomeEnabled } from "@/modules/instagram-welcome";
 
 export const metadata = { title: "Lead sources" };
 
@@ -75,6 +77,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
           <Link className="text-blue-700 underline" href="/messages">{locale === "es" ? "Abrir conversaciones" : "Open conversations"}</Link>
         </div>
         <ul className="mt-3 space-y-2 text-sm">{meta?.metaPages.map(p => <li key={p.id}>{p.pageName} · Messenger: {p.messengerEnabled ? (locale === "es" ? "Conectado" : "Connected") : (locale === "es" ? "Sin conectar" : "Not connected")} · Instagram: {p.instagramEnabled ? (locale === "es" ? "Conectado" : "Connected") : (locale === "es" ? "Sin conectar" : "Not connected")}</li>)}</ul>
+        {meta && <InstagramWelcomeSettings integrationId={meta.id} enabled={instagramWelcomeEnabled(meta.config)} />}
       </Card>
 
       <WhatsAppCard

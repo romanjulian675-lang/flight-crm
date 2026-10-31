@@ -620,8 +620,25 @@ model SocialConversation {
   lastInboundAt DateTime @db.Timestamptz(3)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   messages SocialMessage[]
+  instagramWelcome InstagramWelcome?
   @@unique([pageId, channel, senderId])
   @@index([orgId, lastMessageAt])
+}
+
+/// A welcome is eligible only on a new live Instagram conversation, never on resuming a thread.
+model InstagramWelcome {
+  id String @id @default(uuid()) @db.Uuid
+  orgId String @db.Uuid
+  conversationId String @unique @db.Uuid
+  conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  initialMessageId String
+  initialAt DateTime @db.Timestamptz(3)
+  status String @default("PENDING")
+  lastError String?
+  attemptedAt DateTime? @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([status, createdAt])
 }
 
 model SocialMessage {
