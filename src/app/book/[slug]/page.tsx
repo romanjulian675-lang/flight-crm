@@ -33,11 +33,14 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-white" aria-hidden="true">
                 <Plane size={20} />
               </span>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-slate-600">{page.org.name}</p>
                 <h1 className="text-xl leading-tight font-semibold text-ink sm:text-2xl">{localTitle(page.title, t)}</h1>
                 <p className="mt-1 text-sm text-slate-600">{fmt(t.book.subtitle, { minutes: page.durationMin, school: page.org.name })}</p>
               </div>
+              <a href={switchHref(sp, locale === "es" ? "en" : "es")} hrefLang={locale === "es" ? "en" : "es"} className="shrink-0 rounded-md px-2 py-1 text-sm font-medium text-brand-500 underline">
+                {t.book.switchLanguage}
+              </a>
             </header>
             <BookingFlow
               slug={page.slug}
@@ -53,4 +56,12 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
       </div>
     </main>
   );
+}
+
+/** Same page in the other language, keeping the program and campaign parameters. */
+function switchHref(sp: Record<string, string | string[] | undefined>, lang: "en" | "es") {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) if (typeof v === "string" && k !== "lang") q.set(k, v);
+  q.set("lang", lang);
+  return `?${q}`;
 }

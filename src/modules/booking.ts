@@ -5,7 +5,7 @@ import { AppError, conflict, invalid, notFound } from "@/lib/errors";
 import { fmt } from "@/lib/i18n/format";
 import { en } from "@/lib/i18n/en";
 import { es } from "@/lib/i18n/es";
-import { BOOK_EXPERIENCE, BOOK_PAYMENT, BOOK_PROGRAMS, BOOK_SCHEDULE, BOOK_START, BOOK_VISA } from "@/lib/booking-options";
+import { BOOK_CALL_LANGUAGES, BOOK_CALL_TYPES, BOOK_EXPERIENCE, BOOK_PAYMENT, BOOK_PROGRAMS, BOOK_SCHEDULE, BOOK_START, BOOK_VISA } from "@/lib/booking-options";
 import type { BookingPage, CalendarConnection, Funding, Prisma, Program } from "@/generated/prisma/client";
 import { ensure, isManager, leadScope, type AccessContext } from "@/modules/access";
 import { DEFAULT_HOURS, formatCallTime, formatDay, formatTime, generateSlots, isFree, parseHours, rankHosts, tzAbbr, type Interval, type WeeklyHours } from "@/modules/booking-slots";
@@ -197,6 +197,10 @@ export const bookingInput = z.object({
   payment: z.enum(BOOK_PAYMENT, "payment"),
   location: z.string("location").trim().min(2, "location").max(120, "location"),
   visa: z.enum(BOOK_VISA, "visa"),
+  /** Phone call (we ring them, no Meet link) or Google Meet video. */
+  callType: z.enum(BOOK_CALL_TYPES, "callType").default("video"),
+  /** Language they want to talk in; defaults to the page language. */
+  callLanguage: z.enum(BOOK_CALL_LANGUAGES, "callLanguage").optional(),
   firstName: z.string("firstName").trim().min(1, "firstName").max(80, "firstName"),
   lastName: z.string("lastName").trim().min(1, "lastName").max(80, "lastName"),
   email: z.email("email").max(200, "email").transform((v) => v.toLowerCase()),
@@ -234,6 +238,8 @@ export function answerLines(a: Answers, locale: string): string[] {
     `${t.payment} ${o.payment[a.payment]}`,
     `${t.location} ${a.location}`,
     `${t.visa} ${o.visa[a.visa]}`,
+    `${t.callType} ${o.callType[a.callType]}`,
+    `${t.callLanguage} ${o.callLanguage[a.callLanguage ?? a.language]}`,
   ];
 }
 
@@ -252,6 +258,9 @@ export type BookingResult = {
   endAt: string;
   hostFirstName: string;
   meetLink: string | null;
+  callType: "phone" | "video";
+  /** The number the host will ring, for phone calls. */
+  phone: string | null;
   cancelToken: string;
   leadId: string | null;
 };
@@ -298,6 +307,8 @@ export async function bookCall(db: Db, slug: string, raw: BookingInput, opts: { 
   );
 
   const visitorName = `${a.firstName} ${a.lastName}`.trim();
+  const phoneCall = a.callType === "phone";
+  const callLanguage = a.callLanguage ?? a.language;
   const answers = { ...a } as Prisma.InputJsonValue;
   let claimed: { id: string; host: Host } | null = null;
   for (const hostId of order) {
@@ -319,7 +330,7 @@ export async function bookCall(db: Db, slug: string, raw: BookingInput, opts: { 
   const intake = await ingest(
     db,
     page.integration,
-    { first_name: a.firstName, last_name: a.lastName, email: a.email, phone: a.phone, language: a.language, utm_source: a.utmSource, utm_medium: a.utmMedium, utm_campaign: a.utmCampaign },
+    { first_name: a.firstName, last_name: a.lastName, email: a.email, phone: a.phone, language: callLanguage, utm_source: a.utmSource, utm_medium: a.utmMedium, utm_campaign: a.utmCampaign },
     {
       externalId: `booking:${claimed.id}`,
       source: "WEBSITE",
@@ -350,6 +361,7 @@ export async function bookCall(db: Db, slug: string, raw: BookingInput, opts: { 
       summary: fmt(vt.system.eventSummary, { school: org.name, name: visitorName, program: vt.options.program[a.program] }),
       description: [
         fmt(vt.system.eventIntro, { page: page.title }),
+        ...(phoneCall ? [fmt(vt.system.callPhone, { phone: a.phone })] : []),
         "",
         `${vt.system.name}: ${visitorName}`,
         `${vt.email}: ${a.email}`,
@@ -361,6 +373,8 @@ export async function bookCall(db: Db, slug: string, raw: BookingInput, opts: { 
       end: slot.end,
       timeZone: page.timeZone,
       attendee: { email: a.email, name: visitorName },
+      meet: !phoneCall,
+      location: phoneCall ? a.phone : undefined,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message.slice(0, 200) : "unknown error";
@@ -374,15 +388,15 @@ export async function bookCall(db: Db, slug: string, raw: BookingInput, opts: { 
   await db.$transaction(async (tx) => {
     let taskId: string | null = null;
     if (leadId) {
-      const task = await tx.task.create({ data: { orgId: page.orgId, leadId, title: fmt(st.taskTitle, { name: visitorName }), dueAt: slot.start, assigneeId: host.id } });
+      const task = await tx.task.create({ data: { orgId: page.orgId, leadId, title: phoneCall ? fmt(st.taskTitlePhone, { name: visitorName, phone: a.phone }) : fmt(st.taskTitle, { name: visitorName }), dueAt: slot.start, assigneeId: host.id } });
       taskId = task.id;
       await tx.activity.create({
         data: {
           orgId: page.orgId,
           leadId,
           type: "CALL_BOOKED",
-          body: [fmt(st.activityBooked, { time: callTimeOrg, host: host.name }), event.meetLink && `${st.meet}: ${event.meetLink}`].filter(Boolean).join("\n"),
-          meta: { bookingId: claimed.id, startAt: slot.start.toISOString(), hostId: host.id, meetLink: event.meetLink },
+          body: [fmt(st.activityBooked, { time: callTimeOrg, host: host.name }), phoneCall ? fmt(st.callPhone, { phone: a.phone }) : event.meetLink && `${st.meet}: ${event.meetLink}`].filter(Boolean).join("\n"),
+          meta: { bookingId: claimed.id, startAt: slot.start.toISOString(), hostId: host.id, meetLink: event.meetLink, callType: a.callType, callLanguage },
         },
       });
     }
@@ -395,6 +409,8 @@ export async function bookCall(db: Db, slug: string, raw: BookingInput, opts: { 
     endAt: slot.end.toISOString(),
     hostFirstName: host.name.split(/\s+/)[0] ?? host.name,
     meetLink: event.meetLink,
+    callType: a.callType,
+    phone: phoneCall ? a.phone : null,
     cancelToken: cancelToken(claimed.id),
     leadId,
   };

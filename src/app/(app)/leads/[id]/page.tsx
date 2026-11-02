@@ -154,6 +154,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 when: formatCallTime(c.startAt, locale, c.page.timeZone),
                 host: c.host.user.name,
                 meetLink: c.meetLink,
+                ...callDetails(c.answers),
                 status: c.status,
                 past: c.past,
               }))}
@@ -261,4 +262,11 @@ function MetaBadges({ meta: raw, t, type }: { meta: unknown; t: Dict; type: stri
       {outcome && <Badge tone={outcome === "CONNECTED" ? "green" : "amber"}>{t.outcome[outcome]}</Badge>}
     </>
   );
+}
+
+/** Phone vs video and the call language, from the visitor's booking answers. */
+function callDetails(answers: unknown): { phone: string | null; callLanguage: "en" | "es" | null } {
+  const a = (answers ?? {}) as { callType?: string; phone?: string; callLanguage?: string; language?: string };
+  const lang = a.callLanguage ?? a.language;
+  return { phone: a.callType === "phone" ? (a.phone ?? null) : null, callLanguage: lang === "en" || lang === "es" ? lang : null };
 }

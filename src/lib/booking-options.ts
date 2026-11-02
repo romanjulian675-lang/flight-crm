@@ -5,6 +5,8 @@ export const BOOK_START = ["asap", "1_3_months", "3_6_months", "researching"] as
 export const BOOK_SCHEDULE = ["full_time", "part_time"] as const;
 export const BOOK_PAYMENT = ["self", "loan", "va", "sponsor", "not_sure"] as const;
 export const BOOK_VISA = ["yes", "no", "not_sure"] as const;
+export const BOOK_CALL_TYPES = ["phone", "video"] as const;
+export const BOOK_CALL_LANGUAGES = ["en", "es"] as const;
 
 export type BookProgram = (typeof BOOK_PROGRAMS)[number];
 

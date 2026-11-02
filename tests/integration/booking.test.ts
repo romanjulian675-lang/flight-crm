@@ -269,6 +269,35 @@ describe("bookCall", () => {
     expect(shown[0].past).toBe(false);
   });
 
+  it("phone call in Spanish: no Meet link, the number on the event and task, lead language from the call", async () => {
+    const { s } = await setup();
+    const { f, calls } = googleFetch((c) => {
+      if (c.url.endsWith("/freeBusy")) return { json: { calendars: { primary: { busy: [] } } } };
+      if (c.url.includes("/calendars/primary/events")) return { json: { id: "gev-phone" } };
+    });
+    await prisma.bookingPage.updateMany({ data: { hostIds: [s.agent2.membershipId] } });
+    const res = await bookCall(prisma, "test-school", answers({ callType: "phone", callLanguage: "es" }), { provider: googleProvider(prisma, f), now: NOW });
+    expect(res).toMatchObject({ meetLink: null, callType: "phone", phone: "(772) 555-0100" });
+
+    const insert = calls.find((c) => c.method === "POST" && c.url.includes("/calendars/primary/events"))!;
+    expect(new URL(insert.url).searchParams.get("conferenceDataVersion")).toBeNull();
+    const body = JSON.parse(insert.body);
+    expect(body.conferenceData).toBeUndefined();
+    expect(body.location).toBe("(772) 555-0100");
+    expect(body.description).toContain("Phone call: call (772) 555-0100");
+    expect(calls.filter((c) => c.method === "GET")).toHaveLength(0); // no wait for a Meet link
+
+    const lead = await getLead(prisma, s.owner, res.leadId!);
+    expect(lead.language).toBe("es");
+    expect(lead.tasks[0].title).toBe("Phone Ana Pérez at (772) 555-0100 (booked online)");
+    const note = lead.activities.find((a) => a.type === "NOTE")!.body!;
+    expect(note).toContain("How should we talk? Phone call");
+    expect(note).toContain("Which language do you prefer for the call? Spanish");
+    const booked = lead.activities.find((a) => a.type === "CALL_BOOKED")!;
+    expect(booked.body).toContain("Phone call: call (772) 555-0100");
+    expect(booked.body).not.toContain("meet.google.com");
+  });
+
   it("merges a returning visitor into their lead and hands it to the host", async () => {
     const { s } = await setup();
     const form = await createIntegration(prisma, s.owner, { kind: "WEB_FORM", name: "Website" });

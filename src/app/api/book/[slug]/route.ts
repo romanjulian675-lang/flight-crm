@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: RouteContext<"/api/book/[sl
   try {
     const res = await bookCall(prisma, slug, body as BookingInput, { provider: calendarProvider(prisma) });
     const cancelUrl = `/book/${slug}/cancel?b=${res.bookingId}&t=${res.cancelToken}`;
-    return json({ ok: true, booking: { startAt: res.startAt, endAt: res.endAt, hostFirstName: res.hostFirstName, meetLink: res.meetLink, cancelUrl } });
+    return json({ ok: true, booking: { startAt: res.startAt, endAt: res.endAt, hostFirstName: res.hostFirstName, meetLink: res.meetLink, callType: res.callType, phone: res.phone, cancelUrl } });
   } catch (e) {
     if (e instanceof ZodError) return json({ ok: false, error: "invalid", fields: [...new Set(e.issues.map((i) => String(i.path[0] ?? i.message)))] }, 400);
     if (e instanceof SlotTakenError) return json({ ok: false, error: "slot_taken" }, 409);

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Video } from "lucide-react";
+import { Phone, Video } from "lucide-react";
 import { cancelCallAction } from "@/app/actions/booking";
 import { ActionMessage } from "@/components/forms";
 import { useI18n } from "@/components/i18n-provider";
 import { Badge, buttonClass, Card } from "@/components/ui";
 import { fmt } from "@/lib/i18n/format";
 
-type Call = { id: string; when: string; host: string; meetLink: string | null; status: "CONFIRMED" | "CANCELED"; past: boolean };
+type Call = { id: string; when: string; host: string; meetLink: string | null; phone: string | null; callLanguage: "en" | "es" | null; status: "CONFIRMED" | "CANCELED"; past: boolean };
 
 /** Calls booked through the public page: time, host, Meet link, and cancel for upcoming ones. */
 export function BookedCalls({ calls }: { calls: Call[] }) {
@@ -28,6 +28,12 @@ export function BookedCalls({ calls }: { calls: Call[] }) {
                 {c.status === "CONFIRMED" && c.past && <Badge>{t.calls.past}</Badge>}
               </div>
               <div>{fmt(t.calls.with, { host: c.host })}</div>
+              {c.phone && (
+                <div className="flex items-center gap-1.5">
+                  <Phone size={13} aria-hidden /> {fmt(t.calls.phone, { phone: c.phone })}
+                </div>
+              )}
+              {c.callLanguage && <div>{fmt(t.calls.language, { language: t.book.options.callLanguage[c.callLanguage] })}</div>}
               {upcoming && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   {c.meetLink && (

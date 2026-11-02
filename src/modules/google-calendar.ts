@@ -207,12 +207,16 @@ export type NewEvent = {
   end: Date;
   timeZone: string;
   attendee: { email: string; name: string };
+  /** false for phone calls: no Meet link is created. Default true. */
+  meet?: boolean;
+  /** Shown as the event location, e.g. the number to ring. */
+  location?: string;
 };
 
 export interface CalendarProvider {
   /** Busy intervals on the member's primary calendar between `from` and `to`. */
   freeBusy(conn: CalendarConnection, from: Date, to: Date): Promise<Interval[]>;
-  /** Create the event with a Google Meet link and email the attendee. */
+  /** Create the event (with a Google Meet link unless `meet` is false) and email the attendee. */
   insertEvent(conn: CalendarConnection, event: NewEvent): Promise<{ id: string; meetLink: string | null }>;
   /** Delete the event and email the attendee. Missing events count as deleted. */
   deleteEvent(conn: CalendarConnection, eventId: string): Promise<void>;
@@ -252,15 +256,18 @@ export function googleProvider(db: Db, f: Fetch = fetch, opts: { sleep?: (ms: nu
 
     async insertEvent(conn, ev) {
       const token = await accessToken(db, conn, f);
-      const { json } = await gapi<GEvent>(f, token, "POST", "/calendars/primary/events", { conferenceDataVersion: "1", sendUpdates: "all" }, {
+      const meet = ev.meet !== false;
+      const { json } = await gapi<GEvent>(f, token, "POST", "/calendars/primary/events", { ...(meet ? { conferenceDataVersion: "1" } : {}), sendUpdates: "all" }, {
         summary: ev.summary,
         description: ev.description,
+        ...(ev.location ? { location: ev.location } : {}),
         start: { dateTime: ev.start.toISOString(), timeZone: ev.timeZone },
         end: { dateTime: ev.end.toISOString(), timeZone: ev.timeZone },
         attendees: [{ email: ev.attendee.email, displayName: ev.attendee.name }],
-        conferenceData: { createRequest: { requestId: ev.requestId, conferenceSolutionKey: { type: "hangoutsMeet" } } },
+        ...(meet ? { conferenceData: { createRequest: { requestId: ev.requestId, conferenceSolutionKey: { type: "hangoutsMeet" } } } } : {}),
         reminders: { useDefault: true },
       });
+      if (!meet) return { id: json.id, meetLink: null };
       let link = meetLinkOf(json);
       // Meet links are usually ready at once; if Google is still creating it, look once more.
       if (!link && json.conferenceData?.createRequest?.status?.statusCode === "pending") {
@@ -294,6 +301,7 @@ export function fakeProvider(): CalendarProvider {
       return out;
     },
     async insertEvent(_conn, ev) {
+      if (ev.meet === false) return { id: `fake-${ev.requestId}`, meetLink: null };
       const h = createHash("sha256").update(ev.requestId).digest("hex").replace(/\d/g, (d) => "abcdefghij"[Number(d)]);
       return { id: `fake-${ev.requestId}`, meetLink: `https://meet.google.com/${h.slice(0, 3)}-${h.slice(3, 7)}-${h.slice(7, 10)}` };
     },

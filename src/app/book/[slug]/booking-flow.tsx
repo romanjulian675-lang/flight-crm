@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CalendarCheck, CheckCircle2, Loader2, Video } from "lucide-react";
+import { ArrowLeft, CalendarCheck, CheckCircle2, Loader2, Phone, Video } from "lucide-react";
 import { buttonClass } from "@/components/ui";
-import { BOOK_EXPERIENCE, BOOK_PAYMENT, BOOK_PROGRAMS, BOOK_SCHEDULE, BOOK_START, BOOK_VISA, type BookProgram } from "@/lib/booking-options";
+import { BOOK_CALL_LANGUAGES, BOOK_CALL_TYPES, BOOK_EXPERIENCE, BOOK_PAYMENT, BOOK_PROGRAMS, BOOK_SCHEDULE, BOOK_START, BOOK_VISA, type BookProgram } from "@/lib/booking-options";
 import type { Dict } from "@/lib/i18n/en";
 import { fmt } from "@/lib/i18n/format";
 import { formatCallTime } from "@/modules/booking-slots";
@@ -19,7 +19,7 @@ type Props = {
 };
 
 type Day = { date: string; label: string; abbr: string; slots: { start: string; label: string }[] };
-type Confirmation = { startAt: string; hostFirstName: string; meetLink: string | null; cancelUrl: string; email: string };
+type Confirmation = { startAt: string; hostFirstName: string; meetLink: string | null; callType?: "phone" | "video"; phone?: string | null; cancelUrl: string; email: string };
 
 /** Larger text on phones so iOS doesn't zoom into fields. */
 const field = "text-base sm:text-sm py-2.5 aria-[invalid=true]:border-red-500";
@@ -75,6 +75,8 @@ export function BookingFlow({ slug, t, school, locale, timeZone, initialProgram,
       payment: get("payment"),
       location: get("location"),
       visa: get("visa"),
+      callType: get("callType"),
+      callLanguage: get("callLanguage"),
       firstName: get("firstName"),
       lastName: get("lastName"),
       email: get("email"),
@@ -186,6 +188,10 @@ export function BookingFlow({ slug, t, school, locale, timeZone, initialProgram,
         </label>
 
         <Choice legend={t.visa} name="visa" options={BOOK_VISA.map((v) => [v, o.visa[v]])} invalid={isBad("visa")} cols="grid-cols-3" />
+
+        <Choice legend={t.callType} name="callType" options={BOOK_CALL_TYPES.map((v) => [v, o.callType[v]])} invalid={isBad("callType")} cols="grid-cols-1 sm:grid-cols-2" />
+
+        <Choice legend={t.callLanguage} name="callLanguage" options={BOOK_CALL_LANGUAGES.map((v) => [v, o.callLanguage[v]])} defaultValue={locale} invalid={isBad("callLanguage")} cols="grid-cols-2" />
 
         <fieldset className="space-y-3">
           <legend className={`${question} mb-2`}>{t.contact}</legend>
@@ -317,7 +323,11 @@ export function BookingFlow({ slug, t, school, locale, timeZone, initialProgram,
             <div>
               <dt className="font-medium text-emerald-800">{t.where}</dt>
               <dd>
-                {done.meetLink ? (
+                {done.callType === "phone" && done.phone ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone size={16} aria-hidden /> {fmt(t.phoneCall, { name: done.hostFirstName || school, phone: done.phone })}
+                  </span>
+                ) : done.meetLink ? (
                   <a href={done.meetLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-medium text-brand-500 underline">
                     <Video size={16} aria-hidden /> {t.meet}
                   </a>
