@@ -1,12 +1,15 @@
 import { ZodError } from "zod";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
-import { json, readBody } from "@/lib/http";
+import { CORS_HEADERS, json, readBody } from "@/lib/http";
 import { bookCall, SlotTakenError, type BookingInput } from "@/modules/booking";
 import { calendarProvider } from "@/modules/google-calendar";
 import { RateLimitedError } from "@/modules/intake";
 
-/** Public: book a call on /book/<slug>. JSON body with the answers and the chosen start time. */
+/**
+ * Public: book a call on /book/<slug>, or from the school's own website (cross-origin, see OPTIONS).
+ * JSON body with the answers and the chosen start time.
+ */
 export async function POST(req: Request, { params }: RouteContext<"/api/book/[slug]">) {
   const { slug } = await params;
   const body = await readBody(req);
@@ -16,7 +19,9 @@ export async function POST(req: Request, { params }: RouteContext<"/api/book/[sl
 
   try {
     const res = await bookCall(prisma, slug, body as BookingInput, { provider: calendarProvider(prisma) });
-    const cancelUrl = `/book/${slug}/cancel?b=${res.bookingId}&t=${res.cancelToken}`;
+    // Absolute, because the school's website may be the page showing it.
+    const origin = process.env.APP_URL || process.env.BETTER_AUTH_URL || new URL(req.url).origin;
+    const cancelUrl = new URL(`/book/${slug}/cancel?b=${res.bookingId}&t=${res.cancelToken}`, origin).toString();
     return json({ ok: true, booking: { startAt: res.startAt, endAt: res.endAt, hostFirstName: res.hostFirstName, meetLink: res.meetLink, callType: res.callType, phone: res.phone, cancelUrl } });
   } catch (e) {
     if (e instanceof ZodError) return json({ ok: false, error: "invalid", fields: [...new Set(e.issues.map((i) => String(i.path[0] ?? i.message)))] }, 400);
@@ -27,4 +32,9 @@ export async function POST(req: Request, { params }: RouteContext<"/api/book/[sl
     console.error("[booking] failed:", e instanceof Error ? e.message : e);
     return json({ ok: false, error: "server_error" }, 500);
   }
+}
+
+/** CORS preflight: the school's website posts JSON here from its own domain. */
+export function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
 }

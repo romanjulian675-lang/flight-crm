@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { json } from "@/lib/http";
+import { CORS_HEADERS, json } from "@/lib/http";
 import { findPublicPage, publicAvailability } from "@/modules/booking";
 import { calendarProvider } from "@/modules/google-calendar";
 
@@ -11,4 +11,8 @@ export async function GET(req: Request, { params }: RouteContext<"/api/book/[slu
   const lang = new URL(req.url).searchParams.get("lang") === "es" ? "es" : "en";
   const data = await publicAvailability(prisma, page, calendarProvider(prisma), lang);
   return json({ ok: true, ...data });
+}
+
+export function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
