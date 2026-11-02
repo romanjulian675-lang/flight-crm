@@ -17,6 +17,9 @@ import { PlaybookCard } from "./playbook-card";
 import { TaskPanel } from "./task-panel";
 import { WhatsAppChat } from "./whatsapp-chat";
 import { getAccount, getConversation } from "@/modules/whatsapp";
+import { listLeadBookings } from "@/modules/booking";
+import { formatCallTime } from "@/modules/booking-slots";
+import { BookedCalls } from "./booked-calls";
 
 export const metadata = { title: "Lead" };
 
@@ -34,6 +37,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   const wa = await getAccount(prisma, ctx.orgId);
   const waLive = !!wa && wa.integration.active && !!wa.accessTokenEnc && !!lead.phone;
   const chat = waLive ? await getConversation(prisma, ctx, lead.id) : null;
+  const calls = await listLeadBookings(prisma, ctx, lead.id);
   const nextRequired = org.requireNextStep && lead.stage.kind === "OPEN" && !lead.tasks.some((x) => !x.completedAt);
   const checklistDone = ((lead.checklist ?? {}) as Record<string, string[]>)[lead.stageId] ?? [];
   const memberName = new Map(members.map((m) => [m.id, m.user.name]));
@@ -143,6 +147,18 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         </div>
 
         <div className="space-y-5">
+          {calls.length > 0 && (
+            <BookedCalls
+              calls={calls.map((c) => ({
+                id: c.id,
+                when: formatCallTime(c.startAt, locale, c.page.timeZone),
+                host: c.host.user.name,
+                meetLink: c.meetLink,
+                status: c.status,
+                past: c.past,
+              }))}
+            />
+          )}
           <PlaybookCard
             leadId={lead.id}
             stage={{ id: lead.stage.id, name: lead.stage.name, playbook: lead.stage.playbook, checklist: lead.stage.checklist }}

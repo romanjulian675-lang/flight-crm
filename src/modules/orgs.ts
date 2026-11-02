@@ -29,7 +29,7 @@ const DEFAULT_STAGES: Record<"en" | "es", { name: string; kind: StageKind; color
 
 export const STAGE_COLORS = ["slate", "sky", "indigo", "violet", "amber", "orange", "emerald", "rose", "teal", "pink"] as const;
 
-const timeZoneSchema = z.string().refine((tz) => {
+export const timeZoneSchema = z.string().refine((tz) => {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: tz });
     return true;

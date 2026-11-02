@@ -132,6 +132,9 @@ model Organization {
   leadAlertRecipients String[] @default([])
   leadAlertEnabled Boolean @default(false)
   whatsappMessages WhatsAppMessage[]
+  calendars        CalendarConnection[]
+  bookingPages     BookingPage[]
+  callBookings     CallBooking[]
 }
 
 enum AssignMode {
@@ -168,6 +171,9 @@ model Membership {
   completedTasks Task[]            @relation("TaskCompleter")
   sentInvites    Invite[]
   sentWhatsApp   WhatsAppMessage[]
+  calendar       CalendarConnection?
+  hostedCalls    CallBooking[]       @relation("CallHost")
+  canceledCalls  CallBooking[]       @relation("CallCanceler")
 
   @@unique([orgId, userId])
   @@index([userId])
@@ -309,6 +315,7 @@ model Lead {
   leadAlerts LeadAlert[]
   prospectEmails ProspectEmail[]
   whatsappMessages WhatsAppMessage[]
+  callBookings     CallBooking[]
 
   @@index([orgId, stageId, position])
   @@index([orgId, ownerId])
@@ -330,6 +337,9 @@ enum ActivityType {
   UPDATED
   /// A form/ad/webhook submission from someone already in the system.
   FORM_SUBMITTED
+  /// A call was booked through the public booking page.
+  CALL_BOOKED
+  CALL_CANCELED
 }
 
 /// The lead's timeline. Append-only from the app.
@@ -388,6 +398,8 @@ enum IntegrationKind {
   META
   /// WhatsApp Business (Cloud API): inbound chats become leads, two-way messaging.
   WHATSAPP
+  /// Public "Book a call" page (/book/<slug>); created with the BookingPage.
+  BOOKING
 }
 
 /// One way leads arrive automatically. Its `token` is the secret part of the intake URL.
@@ -413,6 +425,7 @@ model Integration {
   metaPages      MetaPage[]
   metaLeadJobs   MetaLeadJob[]
   whatsapp       WhatsAppAccount?
+  bookingPage    BookingPage?
 
   @@index([orgId])
 }
@@ -713,4 +726,115 @@ model ProspectEmail {
   sentAt DateTime? @db.Timestamptz(3)
   @@index([status, availableAt])
   @@index([orgId, recipient, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Call booking (Google Calendar)
+// ---------------------------------------------------------------------------
+
+enum CalendarStatus {
+  ACTIVE
+  /// The refresh token stopped working (revoked, password change, removed access). Excluded from
+  /// booking until the member reconnects.
+  BROKEN
+}
+
+/// A team member's Google Calendar, used to find free times and to put booked calls on it.
+/// Per membership (not per user) so each school keeps its own connection.
+model CalendarConnection {
+  id                   String         @id @default(uuid()) @db.Uuid
+  orgId                String         @db.Uuid
+  org                  Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  membershipId         String         @unique @db.Uuid
+  membership           Membership     @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  provider             String         @default("google")
+  /// The Google account that granted access (shown in settings).
+  email                String
+  /// AES-256-GCM encrypted (src/lib/crypto.ts).
+  refreshTokenEnc      String
+  accessTokenEnc       String?
+  accessTokenExpiresAt DateTime?      @db.Timestamptz(3)
+  scope                String?
+  status               CalendarStatus @default(ACTIVE)
+  lastError            String?
+  createdAt            DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime       @updatedAt @db.Timestamptz(3)
+
+  @@index([orgId])
+}
+
+/// Public "Book a call" page at /book/<slug>. One per school for now; the model allows more.
+model BookingPage {
+  id            String        @id @default(uuid()) @db.Uuid
+  orgId         String        @db.Uuid
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// Intake source used for IntakeEvent logging (kind BOOKING).
+  integrationId String        @unique @db.Uuid
+  integration   Integration   @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  /// URL part, unique across all schools.
+  slug          String        @unique
+  title         String
+  durationMin   Int           @default(30)
+  /// Free time required before and after each call.
+  bufferMin     Int           @default(0)
+  /// Earliest bookable time = now + minNoticeMin.
+  minNoticeMin  Int           @default(240)
+  /// Bookable days: today plus the next (daysAhead - 1) days.
+  daysAhead     Int           @default(14)
+  /// IANA zone the working hours are in and times are shown in.
+  timeZone      String        @default("America/New_York")
+  /// Weekly working hours: { "0".."6" (Sun..Sat): [["09:00","17:00"], …] }.
+  hours         Json
+  /// Memberships calls are shared between (round-robin). Only members with a working calendar count.
+  hostIds       String[]      @db.Uuid
+  enabled       Boolean       @default(false)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(3)
+  bookings      CallBooking[]
+
+  @@index([orgId])
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELED
+}
+
+/// One booked call. While CONFIRMED, `activeStart` = startAt and the unique (hostId, activeStart)
+/// index stops two visitors getting the same host at the same time; canceling clears it.
+model CallBooking {
+  id            String        @id @default(uuid()) @db.Uuid
+  orgId         String        @db.Uuid
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pageId        String        @db.Uuid
+  page          BookingPage   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  leadId        String?       @db.Uuid
+  lead          Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  hostId        String        @db.Uuid
+  host          Membership    @relation("CallHost", fields: [hostId], references: [id], onDelete: Cascade)
+  startAt       DateTime      @db.Timestamptz(3)
+  endAt         DateTime      @db.Timestamptz(3)
+  activeStart   DateTime?     @db.Timestamptz(3)
+  status        BookingStatus @default(CONFIRMED)
+  visitorName   String
+  visitorEmail  String
+  visitorPhone  String?
+  /// "en" | "es"
+  language      String        @default("en")
+  /// The visitor's answers (program, experience, start, funding, location, visa…).
+  answers       Json
+  googleEventId String?
+  meetLink      String?
+  /// Follow-up task created for the host at the call time.
+  taskId        String?       @db.Uuid
+  canceledAt    DateTime?     @db.Timestamptz(3)
+  /// Null when the visitor canceled (or the system did).
+  canceledById  String?       @db.Uuid
+  canceledBy    Membership?   @relation("CallCanceler", fields: [canceledById], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@unique([hostId, activeStart])
+  @@index([orgId, hostId, startAt])
+  @@index([orgId, leadId])
+  @@index([pageId, createdAt])
 }

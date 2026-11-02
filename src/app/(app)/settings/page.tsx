@@ -5,24 +5,38 @@ import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { getI18n } from "@/lib/i18n";
 import { requirePageAccess } from "@/lib/session";
-import { permissions } from "@/modules/access";
+import { isManager, permissions } from "@/modules/access";
+import { getBookingPage } from "@/modules/booking";
+import { parseHours } from "@/modules/booking-slots";
+import { googleConfig, listCalendars } from "@/modules/google-calendar";
 import { listMembers, listPendingInvites } from "@/modules/members";
 import { listStages } from "@/modules/orgs";
 import { InviteForm, MemberRow, OrgForm, PendingInviteRow, StageEditor } from "./settings-forms";
+import { BookingPageForm, CalendarConnect, CreateBookingPage } from "./booking-settings";
 
 export const metadata = { title: "Settings" };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: PageProps<"/settings">) {
   const ctx = await requirePageAccess();
+  const sp = await searchParams;
   const { t, locale } = await getI18n();
   const canOrg = permissions.manageOrg(ctx);
   const canTeam = permissions.manageMembers(ctx);
-  const [org, members, invites, stages] = await Promise.all([
+  const canBooking = isManager(ctx);
+  const [org, members, invites, stages, calendars, bookingPage] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: ctx.orgId } }),
     listMembers(prisma, ctx),
     canTeam ? listPendingInvites(prisma, ctx) : Promise.resolve([]),
     listStages(prisma, ctx),
+    listCalendars(prisma, ctx.orgId),
+    canBooking ? getBookingPage(prisma, ctx.orgId) : Promise.resolve(null),
   ]);
+  const gcal = googleConfig();
+  const myCalendar = calendars.find((c) => c.membershipId === ctx.membershipId) ?? null;
+  const calendarNotice = { ok: ["green", t.calendar.ok], failed: ["red", t.calendar.failed], scopes: ["red", t.errors.calendarScopesMissing], not_configured: ["amber", t.calendar.notConfigured] }[String(sp.calendar)] as
+    | [string, string]
+    | undefined;
+  const appUrl = process.env.APP_URL || process.env.BETTER_AUTH_URL || "http://localhost:3200";
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
@@ -71,6 +85,48 @@ export default async function SettingsPage() {
           </div>
         )}
       </Card>
+
+      <section id="calendar" className="scroll-mt-4">
+        <Card title={t.calendar.title}>
+          {calendarNotice && (
+            <p
+              role="status"
+              className={`mb-3 rounded-lg px-3 py-2 text-sm ${calendarNotice[0] === "green" ? "bg-emerald-50 text-emerald-800" : calendarNotice[0] === "red" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-800"}`}
+            >
+              {calendarNotice[1]}
+            </p>
+          )}
+          <CalendarConnect connection={myCalendar ? { email: myCalendar.email, status: myCalendar.status } : null} configured={gcal.configured} fake={gcal.fake} />
+        </Card>
+      </section>
+
+      {canBooking && (
+        <Card title={t.booking.title}>
+          {bookingPage ? (
+            <BookingPageForm
+              page={{
+                id: bookingPage.id,
+                title: bookingPage.title,
+                slug: bookingPage.slug,
+                durationMin: bookingPage.durationMin,
+                bufferMin: bookingPage.bufferMin,
+                minNoticeMin: bookingPage.minNoticeMin,
+                daysAhead: bookingPage.daysAhead,
+                timeZone: bookingPage.timeZone,
+                hours: parseHours(bookingPage.hours),
+                hostIds: bookingPage.hostIds,
+                enabled: bookingPage.enabled,
+              }}
+              members={members
+                .filter((m) => m.active)
+                .map((m) => ({ id: m.id, name: m.user.name, calendar: calendars.find((c) => c.membershipId === m.id)?.status ?? null }))}
+              appUrl={appUrl}
+            />
+          ) : (
+            <CreateBookingPage />
+          )}
+        </Card>
+      )}
 
       <Card title={t.settings.pipeline}>
         {canOrg && <p className="mb-3 text-xs text-muted">{t.settings.pipelineHelp}</p>}

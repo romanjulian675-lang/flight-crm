@@ -17,8 +17,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Public forms may be framed; authenticated CRM pages must never be framed.
-        source: "/((?!embed/|apply/).*)",
+        // Public forms (/embed, /apply) and the booking page (/book) may be framed; authenticated CRM pages must never be.
+        source: "/((?!embed/|apply/|book/).*)",
         headers: [{ key: "X-Frame-Options", value: "DENY" }],
       },
       {
@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
       {
         source: "/apply/:path*",
         headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self' https://cgflightacademy.com https://www.cgflightacademy.com" }],
+      },
+      {
+        source: "/book/:path*",
+        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }],
       },
       {
         source: "/:path*",

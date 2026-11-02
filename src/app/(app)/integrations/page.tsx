@@ -41,7 +41,8 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
   const appUrl = process.env.APP_URL || process.env.BETTER_AUTH_URL || "http://localhost:3200";
   const isLocal = /localhost|127\.0\.0\.1/.test(appUrl);
   const meta = integrations.find((i) => i.kind === "META");
-  const others = integrations.filter((i) => i.kind !== "META" && i.kind !== "WHATSAPP");
+  // The booking page's intake source is managed in Settings → Book-a-call page.
+  const others = integrations.filter((i) => i.kind !== "META" && i.kind !== "WHATSAPP" && i.kind !== "BOOKING");
   const wa = await getAccount(prisma, ctx.orgId);
   const tones = { CREATED: "green", MERGED: "blue", DUPLICATE: "slate", REJECTED: "amber", ERROR: "red" } as const;
 

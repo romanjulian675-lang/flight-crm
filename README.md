@@ -17,7 +17,7 @@ npm run db:seed        # demo school with 30 leads
 
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
-Checks: `npm test` (89 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
+Checks: `npm test` (uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
 ## What's built (phases 1–2: CRM core)
 
@@ -72,6 +72,27 @@ Lead sources → **WhatsApp Business**. Each school connects its own number (Pho
 - **Inbox** (`/inbox`, sidebar "WhatsApp" with unread count): every conversation, newest first.
 - Webhook: `GET/POST /api/webhooks/whatsapp/<token>` — signature checked with that school's app secret; retries are idempotent (message ids are unique).
 - Cost: Meta bills WhatsApp conversations/template messages per its current pricing; replies within the 24 h window to someone who wrote first are the cheap/free case. Check Meta's pricing page for your country.
+
+## Book a call (Google Calendar)
+
+A public page at `/book/<slug>` (e.g. `APP_URL/book/cg-flight-academy?program=private`, add `&lang=es` for Spanish; `program` = `private` | `instrument` | `commercial`). Visitors answer the questions (program, experience + hours, start date, full/part-time, how they'll pay, where they live, M-1 visa, contact details), pick a day and time in the page's time zone, and get a confirmation with the host's first name, the Google Meet link and a cancel link.
+
+- **Hosts**: each person connects their own calendar in Settings → **My Google Calendar** (OAuth, offline access; refresh token stored AES-256-GCM encrypted). If Google rejects the refresh token the connection is marked broken and that person is skipped until they reconnect.
+- **Page settings** (owners/managers, Settings → **Book-a-call page**): title, link name, call length (30), break between calls (0), minimum notice (4 h), days ahead (14), time zone, weekly hours (Mon–Fri 9–17, Sat 10–14), who takes calls, on/off.
+- **Availability**: working-hours slots stepped by the call length, after the minimum notice, for today plus the next days-ahead − 1 days. A time is offered when at least one host has nothing on their primary Google calendar (free/busy, padded by the break) and no other confirmed call in the CRM. The page never shows who.
+- **Who gets the call**: free/busy is checked again for the chosen time; among the free hosts, the one with the fewest upcoming calls, then whoever got a call least recently. A transaction locks the host and checks for overlaps, and a unique (host, start) index backs it up, so two visitors can't get the same host at the same time ("just taken, pick another" otherwise).
+- **In the CRM**: the visitor becomes (or is merged into) a website lead owned by the host, with program, funding, timeline and international/visa filled in and every answer in the note; an IntakeEvent is logged; the timeline gets "Call booked for … with …" + Meet link; the host gets a task at the call time. The event goes on the host's calendar with a Meet link and an invitation to the visitor (Google sends it).
+- **Cancel**: from the lead page (Booked calls → Cancel call) or the visitor's signed cancel link. The Google event is deleted with cancellation emails, the time is freed, the task removed and the timeline updated. Changes made directly in Google Calendar (e.g. the visitor declining the invite) are not synced back.
+
+### Google Cloud setup (once, by the Workspace admin)
+
+1. console.cloud.google.com → create (or pick) a project → **APIs & Services → Library** → enable **Google Calendar API**.
+2. **OAuth consent screen**: user type **Internal** (only accounts in your Workspace domain can connect; no Google verification needed). App name, support email; scopes `openid`, `email`, `…/auth/calendar.events`, `…/auth/calendar.freebusy`.
+3. **Credentials → Create credentials → OAuth client ID** → type *Web application* → Authorized redirect URI: `APP_URL/api/integrations/google/callback` (exact, HTTPS in production).
+4. Put the client ID and secret in `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` on the server (plus `TOKEN_ENCRYPTION_KEY`, `APP_URL`).
+5. Each host signs in to the CRM → Settings → **Connect Google Calendar** with their Workspace account; then an owner/manager picks them under "Who takes the calls" and turns the page on.
+
+Local preview without Google: `CALENDAR_FAKE=1 npm run dev` (ignored in production) makes "Connect Google Calendar" connect a fake calendar (busy 12–1 pm daily, made-up Meet links).
 
 ## Layout
 

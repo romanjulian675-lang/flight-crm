@@ -1,6 +1,6 @@
 import type { Db, Tx } from "@/lib/db";
 import { AppError } from "@/lib/errors";
-import type { Integration, IntakeStatus, LeadSource, Prisma, Program } from "@/generated/prisma/client";
+import type { Funding, Integration, IntakeStatus, LeadSource, Prisma, Program } from "@/generated/prisma/client";
 import { pickOwner } from "@/modules/assignment";
 import { insertLead, leadInput, normalizePhone } from "@/modules/leads";
 
@@ -177,6 +177,15 @@ export type IngestOptions = {
   extraNote?: string | null;
   /** Human-readable channel name shown in the timeline, e.g. "Website form". */
   via?: string;
+  /**
+   * Owner decided by the caller (e.g. the host of a booked call). Overrides the integration's owner and
+   * the assignment rules, and takes over an existing lead on merge.
+   */
+  ownerId?: string | null;
+  /** Lead fields known from a structured form. Set on new leads; on a merge they only fill blanks. */
+  fields?: { program?: Program; funding?: Funding; timeline?: string | null; isInternational?: boolean };
+  /** Don't add the "contact now" task (the caller schedules its own). */
+  skipTask?: boolean;
   now?: Date;
 };
 
@@ -247,14 +256,31 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
       if (n.email) or.push({ email: n.email });
       if (n.phone) or.push({ phone: n.phone });
       const existing = or.length
-        ? await tx.lead.findFirst({ where: { orgId: integration.orgId, OR: or }, orderBy: { createdAt: "desc" }, select: { id: true, ownerId: true } })
+        ? await tx.lead.findFirst({
+            where: { orgId: integration.orgId, OR: or },
+            orderBy: { createdAt: "desc" },
+            select: { id: true, ownerId: true, funding: true, timeline: true, isInternational: true },
+          })
+        : null;
+      const forcedOwner = opts.ownerId
+        ? ((await tx.membership.findFirst({ where: { id: opts.ownerId, orgId: integration.orgId, active: true }, select: { id: true } }))?.id ?? null)
         : null;
 
       if (existing) {
         await tx.activity.create({
           data: { orgId: integration.orgId, leadId: existing.id, type: "FORM_SUBMITTED", body: note, meta: { via, source: summary.source } },
         });
-        await addContactTask(tx, integration.orgId, existing.id, existing.ownerId, titles.again, now);
+        const f = opts.fields ?? {};
+        const fill: Prisma.LeadUpdateInput = {};
+        if (f.funding && f.funding !== "UNKNOWN" && existing.funding === "UNKNOWN") fill.funding = f.funding;
+        if (f.timeline && !existing.timeline) fill.timeline = f.timeline.slice(0, 120);
+        if (f.isInternational && !existing.isInternational) fill.isInternational = true;
+        if (forcedOwner && forcedOwner !== existing.ownerId) fill.owner = { connect: { id: forcedOwner } };
+        if (Object.keys(fill).length) await tx.lead.update({ where: { id: existing.id }, data: fill });
+        if (fill.owner) {
+          await tx.activity.create({ data: { orgId: integration.orgId, leadId: existing.id, type: "ASSIGNED", meta: { from: existing.ownerId, to: forcedOwner, auto: true } } });
+        }
+        if (!opts.skipTask) await addContactTask(tx, integration.orgId, existing.id, forcedOwner ?? existing.ownerId, titles.again, now);
         return finish("MERGED", existing.id);
       }
 
@@ -266,21 +292,23 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
         language: n.language ?? (org.locale === "es" ? "es" : "en"),
         source: summary.source,
         sourceDetail: via.slice(0, 200),
-        program: n.program ?? integration.defaultProgram,
-        timeline: n.timeline,
+        program: opts.fields?.program ?? n.program ?? integration.defaultProgram,
+        funding: opts.fields?.funding,
+        isInternational: opts.fields?.isInternational,
+        timeline: opts.fields?.timeline ?? n.timeline,
         utmSource: n.utmSource,
         utmMedium: n.utmMedium,
         utmCampaign: n.utmCampaign,
       });
-      let ownerId: string | null = null;
-      if (integration.defaultOwnerId) {
+      let ownerId: string | null = forcedOwner;
+      if (!ownerId && integration.defaultOwnerId) {
         const m = await tx.membership.findFirst({ where: { id: integration.defaultOwnerId, orgId: integration.orgId, active: true }, select: { id: true } });
         ownerId = m?.id ?? null;
       }
       ownerId ??= await pickOwner(tx, integration.orgId, { language: data.language, program: data.program, source: data.source });
       const lead = await insertLead(tx, integration.orgId, data, { ownerId, actorId: null, note, createdMeta: { source: data.source, via } });
       if (ownerId) await tx.activity.create({ data: { orgId: integration.orgId, leadId: lead.id, type: "ASSIGNED", meta: { from: null, to: ownerId, auto: true } } });
-      await addContactTask(tx, integration.orgId, lead.id, ownerId, titles.new, now);
+      if (!opts.skipTask) await addContactTask(tx, integration.orgId, lead.id, ownerId, titles.new, now);
       return finish("CREATED", lead.id);
     }, { timeout: 10_000 });
   } catch (e) {
