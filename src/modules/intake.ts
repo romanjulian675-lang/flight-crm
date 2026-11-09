@@ -216,6 +216,7 @@ export async function ingest(db: Db, integration: Integration, raw: RawFields, o
     name: `${n.firstName} ${n.lastName}`.trim() || null,
     email: n.email,
     phone: n.phone,
+    attribution: { utmSource: n.utmSource, utmMedium: n.utmMedium, utmCampaign: n.utmCampaign, adId: text(raw.utm_content).slice(0, 120) || null },
     program: n.program,
     source: opts.source ?? n.source ?? parseSource(n.utmSource ?? "") ?? integration.defaultSource,
   } satisfies Prisma.InputJsonValue;

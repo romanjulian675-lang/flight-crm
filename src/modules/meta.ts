@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Db } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import { newToken } from "@/modules/integrations";
+import { connectMetaAds } from "@/modules/meta-ads";
 import { ingest } from "@/modules/intake";
 
 /**
@@ -18,7 +19,7 @@ import { ingest } from "@/modules/intake";
  */
 
 export const META_MESSAGE_SCOPES = ["pages_messaging", "instagram_basic", "instagram_manage_messages"];
-export const META_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_metadata", "leads_retrieval", "business_management"];
+export const META_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_metadata", "leads_retrieval", "business_management", "ads_read"];
 
 export type Fetch = typeof fetch;
 
@@ -40,7 +41,7 @@ export const metaRedirectUri = () => `${metaConfig().appUrl}/api/integrations/me
 
 export function metaLoginUrl(state: string, messaging = false) {
   const c = metaConfig();
-  const p = new URLSearchParams({ client_id: c.appId, redirect_uri: metaRedirectUri(), state, scope: [...META_SCOPES, ...(messaging ? META_MESSAGE_SCOPES : [])].join(","), response_type: "code" });
+  const p = new URLSearchParams({ client_id: c.appId, redirect_uri: metaRedirectUri(), state, scope: [...META_SCOPES, ...(messaging ? META_MESSAGE_SCOPES : [])].join(","), response_type: "code", auth_type: "rerequest" });
   return `https://www.facebook.com/${c.version}/dialog/oauth?${p}`;
 }
 
@@ -109,6 +110,8 @@ export async function connectMetaPages(db: Db, orgId: string, code: string, f: F
     });
     results.push({ pageName: p.name, ok: subscribed, error: lastError ?? undefined });
   }
+  try { await connectMetaAds(db, orgId, integration.id, long.access_token, f); }
+  catch { /* Lead delivery remains connected; reporting UI offers reconnection. */ }
   return results;
 }
 
@@ -130,7 +133,7 @@ export async function disconnectMetaPage(db: Db, orgId: string, metaPageId: stri
 
 type LeadgenChange = { field?: string; value?: { leadgen_id?: string; page_id?: string; form_id?: string; ad_id?: string } };
 type MetaWebhookBody = { object?: string; entry?: { id?: string; changes?: LeadgenChange[] }[] };
-type MetaLead = { id: string; field_data?: { name: string; values?: string[] }[]; platform?: string; ad_name?: string; campaign_name?: string; form_id?: string; is_organic?: boolean };
+type MetaLead = { id: string; ad_id?: string; field_data?: { name: string; values?: string[] }[]; platform?: string; ad_name?: string; campaign_name?: string; form_id?: string; is_organic?: boolean };
 
 /** Process a (signature-verified) webhook delivery. Never throws: failures are logged as intake events. */
 export async function handleMetaWebhook(db: Db, body: MetaWebhookBody, f: Fetch = fetch) {
@@ -147,12 +150,14 @@ export async function handleMetaWebhook(db: Db, body: MetaWebhookBody, f: Fetch 
       }
       try {
         const lead = await graph<MetaLead>(f, v.leadgen_id, {
-          fields: "id,field_data,platform,ad_name,campaign_name,form_id,is_organic",
+          fields: "id,ad_id,field_data,platform,ad_name,campaign_name,form_id,is_organic",
           access_token: decryptSecret(page.accessTokenEnc),
         });
         const raw: Record<string, string> = {};
         for (const fd of lead.field_data ?? []) raw[fd.name] = (fd.values ?? []).join(", ");
+        if (lead.ad_id || v.ad_id) raw.utm_content = String(lead.ad_id || v.ad_id);
         const ig = lead.platform === "ig" || lead.platform === "instagram";
+        raw.utm_source = ig ? "instagram" : "facebook";
         const res = await ingest(db, page.integration, raw, {
           externalId: `fb:${v.leadgen_id}`,
           source: ig ? "INSTAGRAM" : "FACEBOOK",

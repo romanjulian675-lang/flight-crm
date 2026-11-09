@@ -104,3 +104,10 @@ export async function retryMetaJobAction(id: string) {
     return t.integrations.delivery.retryRequested;
   });
 }
+
+export async function selectMetaAdAccountAction(_prev: unknown, fd: FormData) {
+ return runAction(async ctx => { const { selectMetaAdAccount } = await import("@/modules/meta-ads"); await selectMetaAdAccount(prisma, ctx, formString(fd, "accountId")); });
+}
+export async function syncMetaAdReportAction(_prev: unknown, fd: FormData) {
+ return runAction(async ctx => { const { syncMetaAdReport } = await import("@/modules/meta-ads"); await syncMetaAdReport(prisma, ctx, formString(fd, "since"), formString(fd, "until")); });
+}

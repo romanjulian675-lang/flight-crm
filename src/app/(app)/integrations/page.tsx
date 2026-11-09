@@ -1,3 +1,5 @@
+import { readMetaAds, metaAdOutcomes } from "@/modules/meta-ads";
+import { MetaAdReporting } from "./meta-ad-reporting";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { redirect } from "next/navigation";
 import { Badge, Card, Empty, PageHeader } from "@/components/ui";
@@ -42,6 +44,8 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
   const isLocal = /localhost|127\.0\.0\.1/.test(appUrl);
   const meta = integrations.find((i) => i.kind === "META");
   const others = integrations.filter((i) => i.kind !== "META" && i.kind !== "WHATSAPP");
+  const metaAds = readMetaAds(meta?.config);
+  const metaOutcomes = await metaAdOutcomes(prisma, ctx, meta?.config);
   const wa = await getAccount(prisma, ctx.orgId);
   const tones = { CREATED: "green", MERGED: "blue", DUPLICATE: "slate", REJECTED: "amber", ERROR: "red" } as const;
 
@@ -69,6 +73,8 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
         integration={meta ? { id: meta.id, name: meta.name, active: meta.active, defaultSource: meta.defaultSource, defaultProgram: meta.defaultProgram, defaultOwnerId: meta.defaultOwnerId, count: meta._count.events, lastEventAt: meta.lastEventAt?.toISOString() ?? null } : null}
         members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       />
+
+      <MetaAdReporting accounts={metaAds?.accounts ?? []} selectedId={metaAds?.selectedId ?? null} report={metaAds?.report ?? null} outcomes={metaOutcomes} />
 
       <Card title={locale === "es" ? "Mensajes de Facebook e Instagram" : "Facebook & Instagram messages"}>
         <p className="text-sm text-muted">{locale === "es" ? "Recibe mensajes nuevos como prospectos y responde desde el CRM dentro de 24 horas. Meta debe aprobar los permisos para mensajes de clientes. No importa conversaciones antiguas." : "Receive new messages as leads and reply from the CRM within 24 hours. Meta must approve messaging permissions for customer conversations. Existing conversation history is not imported."}</p>
