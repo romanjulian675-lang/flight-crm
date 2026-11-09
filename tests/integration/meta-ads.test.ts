@@ -60,6 +60,22 @@ describe("Meta read-only reporting", () => {
   const raw = { first_name: "Pilot", email: "pilot@example.com", utm_source: "meta", utm_content: "987" };
   await ingest(prisma, s.integration, raw, { externalId: "one", now: new Date("2026-11-09T12:00:00Z") });
   await ingest(prisma, s.integration, raw, { externalId: "two", now: new Date("2026-11-09T12:00:01Z") });
-  const i = await prisma.integration.findUniqueOrThrow({ where: { id: s.integration.id } }); expect(await metaAdOutcomes(prisma, s.owner, i.config)).toEqual({ "987": { leads: 1, enrolled: 0 } });
+  const i = await prisma.integration.findUniqueOrThrow({ where: { id: s.integration.id } }); expect(await metaAdOutcomes(prisma, s.owner, i.config)).toEqual({ "987": { leads: 1, booked: null, enrolled: 0 } });
+  const won = await prisma.pipelineStage.findFirstOrThrow({ where: { orgId: s.org.id, kind: "WON" } });
+  await prisma.lead.updateMany({ where: { orgId: s.org.id }, data: { stageId: won.id } });
+  await selectMetaAdAccount(prisma, s.owner, account.id, f, won.id);
+  const mapped = await prisma.integration.findUniqueOrThrow({ where: { id: i.id } });
+  expect(await metaAdOutcomes(prisma, s.owner, mapped.config)).toEqual({ "987": { leads: 1, booked: 1, enrolled: 1 } });
  });
+ it("does not overwrite a connection changed while a report is downloading", async () => {
+  const s = await fixture(); await connectMetaAds(prisma, s.org.id, s.integration.id, "user-secret", f); await selectMetaAdAccount(prisma, s.owner, account.id, f);
+  const won = await prisma.pipelineStage.findFirstOrThrow({ where: { orgId: s.org.id, kind: "WON" } });
+  await expect(syncMetaAdReport(prisma, s.owner, "2026-11-01", "2026-11-14", async (url, init) => {
+   if (String(url).includes("/insights?")) await selectMetaAdAccount(prisma, s.owner, account.id, f, won.id);
+   return f(url, init);
+  })).rejects.toThrow("connection changed");
+  const saved = readMetaAds((await prisma.integration.findUniqueOrThrow({ where: { id: s.integration.id } })).config)!;
+  expect(saved.bookedStageId).toBe(won.id); expect(saved.report).toBeNull();
+ });
+
 });

@@ -45,6 +45,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
   const meta = integrations.find((i) => i.kind === "META");
   const others = integrations.filter((i) => i.kind !== "META" && i.kind !== "WHATSAPP");
   const metaAds = readMetaAds(meta?.config);
+  const bookingStages = await prisma.pipelineStage.findMany({ where: { orgId: ctx.orgId }, orderBy: { position: "asc" }, select: { id: true, name: true } });
   const metaOutcomes = await metaAdOutcomes(prisma, ctx, meta?.config);
   const wa = await getAccount(prisma, ctx.orgId);
   const tones = { CREATED: "green", MERGED: "blue", DUPLICATE: "slate", REJECTED: "amber", ERROR: "red" } as const;
@@ -74,7 +75,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/int
         members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       />
 
-      <MetaAdReporting accounts={metaAds?.accounts ?? []} selectedId={metaAds?.selectedId ?? null} report={metaAds?.report ?? null} outcomes={metaOutcomes} />
+      <MetaAdReporting stages={bookingStages} bookedStageId={metaAds?.bookedStageId ?? null} accounts={metaAds?.accounts ?? []} selectedId={metaAds?.selectedId ?? null} report={metaAds?.report ?? null} outcomes={metaOutcomes} />
 
       <Card title={locale === "es" ? "Mensajes de Facebook e Instagram" : "Facebook & Instagram messages"}>
         <p className="text-sm text-muted">{locale === "es" ? "Recibe mensajes nuevos como prospectos y responde desde el CRM dentro de 24 horas. Meta debe aprobar los permisos para mensajes de clientes. No importa conversaciones antiguas." : "Receive new messages as leads and reply from the CRM within 24 hours. Meta must approve messaging permissions for customer conversations. Existing conversation history is not imported."}</p>

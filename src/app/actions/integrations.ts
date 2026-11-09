@@ -106,7 +106,7 @@ export async function retryMetaJobAction(id: string) {
 }
 
 export async function selectMetaAdAccountAction(_prev: unknown, fd: FormData) {
- return runAction(async ctx => { const { selectMetaAdAccount } = await import("@/modules/meta-ads"); await selectMetaAdAccount(prisma, ctx, formString(fd, "accountId")); });
+ return runAction(async ctx => { const { selectMetaAdAccount } = await import("@/modules/meta-ads"); await selectMetaAdAccount(prisma, ctx, formString(fd, "accountId"), undefined, formString(fd, "bookedStageId")); });
 }
 export async function syncMetaAdReportAction(_prev: unknown, fd: FormData) {
  return runAction(async ctx => { const { syncMetaAdReport } = await import("@/modules/meta-ads"); await syncMetaAdReport(prisma, ctx, formString(fd, "since"), formString(fd, "until")); });
