@@ -19,6 +19,23 @@ Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.l
 
 Checks: `npm test` (65 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.
 
+## SonarQube Cloud
+
+The repository includes a CI workflow at `.github/workflows/sonarqube-analysis.yml`.
+It runs tests with LCOV coverage, type checking, linting, the production build, and a
+SonarQube Cloud scan on pushes and pull requests targeting `main`.
+
+Before enabling the workflow in GitHub:
+
+1. Create/import the `flight-crm` project in SonarQube Cloud and disable Automatic Analysis.
+2. Add the generated token as the repository secret `SONAR_TOKEN`.
+3. Add the SonarQube organization key as the repository variable `SONAR_ORGANIZATION`.
+4. Replace `REPLACE_WITH_SONAR_ORGANIZATION` in `sonar-project.properties` with the same key.
+
+The Quality Gate is configured to make the scan step fail when SonarQube Cloud reports a
+failed gate. To block merges as well, mark the SonarQube check as required in the `main`
+branch protection rules.
+
 ## What's built (phases 1–2: CRM core)
 
 - **Accounts & tenancy**: sign-up creates a school + owner + default pipeline. Every tenant table has `orgId`; every service filters by the caller's school (tests prove a school can't read or change another's data). Users can belong to several schools (switcher in the sidebar).
