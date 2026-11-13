@@ -49,14 +49,14 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      - name: Build application
+        run: npm run build
+
       - name: Check types
         run: npm run typecheck
 
       - name: Lint
         run: npm run lint
-
-      - name: Build application
-        run: npm run build
 
       - name: SonarQube Cloud scan
         uses: SonarSource/sonarqube-scan-action@v7
