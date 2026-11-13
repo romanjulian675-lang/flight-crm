@@ -66,4 +66,3 @@ jobs:
           args: >-
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=flight-crm
-            -Dsonar.qualitygate.wait=true
