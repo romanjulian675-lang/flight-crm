@@ -20,6 +20,22 @@ El proyecto existente se conservará como punto de partida. Las mejoras realizad
 - [Trazabilidad](./12-trazabilidad-historia.md)
 - [Guion de sustentación](./13-guion-sustentacion.md)
 
+## Comandos de demostración
+
+```powershell
+npm run db:local
+npm run db:migrate
+npm run db:seed
+npm run db:demo-history
+npm run dev
+```
+
+En otra terminal:
+
+```powershell
+npm run verify:demo
+```
+
 ## Regla de evidencia
 
 Cada afirmación sobre usuarios, validación, reuniones o resultados debe estar respaldada por una captura, enlace, commit, ejecución registrada o nota fechada. Los elementos pendientes están marcados explícitamente y no deben presentarse como realizados hasta contar con evidencia.

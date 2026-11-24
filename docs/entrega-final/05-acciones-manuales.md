@@ -35,6 +35,29 @@ npm run test:coverage
 
 La configuración de Vitest usa un único worker basado en threads para evitar cierres inesperados de procesos nativos en Windows durante la suite de integración.
 
+## Preparar la demostración
+
+Con PostgreSQL activo, ejecutar una sola vez:
+
+```powershell
+npm run db:seed
+npm run db:demo-history
+```
+
+El segundo comando agrega historial sintético únicamente a la escuela cuyo nombre termina en `(demo)` y solo usa usuarios `@demo.local`. Para verificar que la aplicación y los datos están listos:
+
+```powershell
+npm run dev
+```
+
+En otra terminal:
+
+```powershell
+npm run verify:demo
+```
+
+No ejecutar `db:demo-history` contra datos reales ni modificar los usuarios de demostración para incluir credenciales reales.
+
 No subir `.env`, `.env.local`, contraseñas, tokens ni datos reales.
 
 ## Cliente y validación

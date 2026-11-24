@@ -30,6 +30,14 @@ Invoke-WebRequest http://localhost:3200/api/health | Select-Object StatusCode, C
 
 La prueba automatizada cubre tanto el estado saludable como el error de conexión simulado.
 
+Para comprobar todo el entorno de demostración, con la aplicación y PostgreSQL activos:
+
+```powershell
+npm run verify:demo
+```
+
+El comando confirma el endpoint, la escuela demo, el número de leads y los usuarios de demostración.
+
 ## Recuperación
 
 1. Revisar el commit y el workflow de la última versión funcional.
