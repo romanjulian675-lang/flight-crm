@@ -33,6 +33,8 @@ npm run db:seed
 npm run test:coverage
 ```
 
+La configuración de Vitest usa un único worker basado en threads para evitar cierres inesperados de procesos nativos en Windows durante la suite de integración.
+
 No subir `.env`, `.env.local`, contraseñas, tokens ni datos reales.
 
 ## Cliente y validación

@@ -18,6 +18,10 @@ export default defineConfig({
     setupFiles: ["tests/setup-env.ts"],
     // Integration tests share one database and truncate it between tests.
     fileParallelism: false,
+    // A single worker avoids native child-process crashes on Windows when the
+    // integration suite uses embedded PostgreSQL and external API stubs.
+    pool: "threads",
+    maxWorkers: 1,
     testTimeout: 30_000,
     hookTimeout: 60_000,
   },

@@ -39,4 +39,4 @@ Flight CRM ayuda a una escuela de aviación a recibir prospectos, asignarlos al 
 
 ## Línea base técnica
 
-En la primera verificación local, `npm run typecheck` y `npm run lint` terminaron correctamente. `npm test` no pudo completar porque PostgreSQL no estaba ejecutándose en `localhost:5434`; este resultado se conserva como condición de entorno, no como fallo funcional del producto.
+En la primera verificación local, `npm run typecheck` y `npm run lint` terminaron correctamente. La primera ejecución de cobertura no pudo completar porque PostgreSQL no estaba ejecutándose en `localhost:5434`; después de levantar la base, 53 de 65 pruebas terminaron y un worker de Vitest se cerró inesperadamente en Windows mientras ejecutaba `intake.test.ts`. El archivo aislado pasó con un único worker basado en threads. Se ajustó la configuración para usar un único worker basado en threads y la repetición terminó con **65 de 65 pruebas aprobadas** y **88.51% de cobertura de líneas**.
