@@ -11,6 +11,12 @@ El backlog se ordena por valor para el usuario principal: una persona responsabl
 | 5 | HU-05 Proteger la información de cada escuela | Mantiene privacidad entre clientes | Existente, por verificar |
 | 6 | HU-06 Integrar, probar y reproducir una entrega | Reduce riesgo al publicar cambios | Parcial, completar en la entrega |
 
+## Deuda técnica priorizada
+
+| Prioridad | Elemento | Motivo | Criterio de salida |
+|---|---|---|---|
+| Técnica 1 | TD-01 Remediar vulnerabilidades transitivas de Prisma | `npm audit` identifica un aviso alto en `effect` y la corrección automática propone un cambio mayor | Actualizar Prisma de forma compatible, repetir pruebas, build y audit, y registrar el resultado |
+
 ## HU-01 Ver leads sin primer contacto
 
 **Como** responsable de admisiones, **quiero** identificar los leads que llevan más de 24 horas sin contacto, **para** priorizar la atención de los prospectos con mayor riesgo de abandono.
@@ -55,6 +61,7 @@ El backlog se ordena por valor para el usuario principal: una persona responsabl
 
 **Como** equipo de desarrollo, **queremos** verificar cada cambio automáticamente y documentar su ejecución, **para** entregar una versión reproducible y confiable.
 
-- Dado un push o pull request hacia `main`, cuando se ejecuta GitHub Actions, entonces instala dependencias, levanta la base, ejecuta pruebas, build, typecheck y lint.
+- Dado un push o pull request hacia `main`, cuando se ejecuta GitHub Actions, entonces instala dependencias, levanta la base, ejecuta pruebas, build, typecheck, lint y auditoría de dependencias.
 - Dado un cambio con cobertura, cuando finaliza la validación, entonces se genera `coverage/lcov.info` para SonarQube.
+- Dado un hallazgo de dependencias, cuando finaliza la auditoría, entonces se conserva un reporte JSON y el equipo registra la decisión de remediación.
 - Dado un fallo de calidad o una versión defectuosa, cuando se revisa el procedimiento de recuperación, entonces el equipo puede volver al último commit funcional identificado.

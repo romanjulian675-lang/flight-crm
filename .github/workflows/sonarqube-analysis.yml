@@ -12,6 +12,52 @@ permissions:
   contents: read
 
 jobs:
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        id: audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > npm-audit.json
+          status=$?
+          cat npm-audit.json
+          exit $status
+
+      - name: Summarize dependency audit
+        if: always()
+        shell: bash
+        run: |
+          echo "## Dependency audit" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.audit.outcome }}" = "success" ]; then
+            echo "No audit findings at the configured npm threshold." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "npm audit reported findings. See the uploaded npm-audit-report artifact; remediation is tracked before making this check blocking." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload npm audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: npm-audit-report
+          path: npm-audit.json
+
   quality:
     name: Test, build and analyze
     runs-on: ubuntu-latest
