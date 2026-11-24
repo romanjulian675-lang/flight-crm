@@ -6,7 +6,12 @@ const baseUrl = process.env.APP_URL ?? "http://localhost:3200";
 async function main() {
   if (process.env.NODE_ENV === "production") throw new Error("Refusing to verify the local demo in production.");
 
-  const health = await fetch(`${baseUrl.replace(/\/$/, "")}/api/health`);
+  let health: Response;
+  try {
+    health = await fetch(`${baseUrl.replace(/\/$/, "")}/api/health`);
+  } catch {
+    throw new Error(`Cannot reach ${baseUrl}/api/health. Start the app with \"npm run dev\" and try again.`);
+  }
   const body = (await health.json()) as { status?: string; database?: string };
   if (!health.ok || body.status !== "ok" || body.database !== "ok") {
     throw new Error(`Health check failed (${health.status}): ${JSON.stringify(body)}`);
