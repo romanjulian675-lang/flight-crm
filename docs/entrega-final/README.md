@@ -11,6 +11,14 @@ El proyecto existente se conservará como punto de partida. Las mejoras realizad
 - [Definition of Done](./03-definition-of-done.md)
 - [Plan de sprints](./04-plan-de-sprints.md)
 - [Acciones manuales](./05-acciones-manuales.md)
+- [Baseline técnica](./06-baseline-tecnica.md)
+- [SCA y entrega](./07-devops-sca.md)
+- [Océano azul](./08-oceano-azul.md)
+- [Operación y recuperación](./09-operacion-y-recuperacion.md)
+- [Validación con cliente](./10-validacion-cliente.md)
+- [Lean y mejora](./11-lean-y-mejora.md)
+- [Trazabilidad](./12-trazabilidad-historia.md)
+- [Guion de sustentación](./13-guion-sustentacion.md)
 
 ## Regla de evidencia
 
