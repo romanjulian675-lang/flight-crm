@@ -65,3 +65,4 @@ El backlog se ordena por valor para el usuario principal: una persona responsabl
 - Dado un cambio con cobertura, cuando finaliza la validación, entonces se genera `coverage/lcov.info` para SonarQube.
 - Dado un hallazgo de dependencias, cuando finaliza la auditoría, entonces se conserva un reporte JSON y el equipo registra la decisión de remediación.
 - Dado un fallo de calidad o una versión defectuosa, cuando se revisa el procedimiento de recuperación, entonces el equipo puede volver al último commit funcional identificado.
+- Dado un entorno de demostración activo, cuando consulto `/api/health`, entonces recibo el estado de la aplicación y de la base de datos sin información sensible.
