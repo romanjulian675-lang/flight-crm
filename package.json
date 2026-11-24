@@ -13,6 +13,7 @@
     "db:local": "tsx scripts/db-local.ts",
     "db:seed": "prisma db seed",
     "db:demo-history": "tsx scripts/seed-demo-history.ts",
+    "verify:demo": "tsx scripts/verify-demo.ts",
     "dev:all": "concurrently -n db,web -c gray,blue \"npm:db:local\" \"npm:dev\"",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
