@@ -9,7 +9,8 @@ El backlog se ordena por valor para el usuario principal: una persona responsabl
 | 3 | HU-03 Registrar contacto y próximo paso | Evita seguimientos olvidados | Existente, por verificar |
 | 4 | HU-04 Reservar una llamada | Convierte el interés en una acción concreta | Existente, por verificar |
 | 5 | HU-05 Proteger la información de cada escuela | Mantiene privacidad entre clientes | Existente, por verificar |
-| 6 | HU-06 Integrar, probar y reproducir una entrega | Reduce riesgo al publicar cambios | Parcial, completar en la entrega |
+| 6 | HU-06 Preparar una ruta internacional | Convierte un lead internacional en un plan de orientación accionable | Nuevo, implementar |
+| 7 | HU-07 Integrar, probar y reproducir una entrega | Reduce riesgo al publicar cambios | Parcial, completar en la entrega |
 
 ## Deuda técnica priorizada
 
@@ -57,7 +58,15 @@ El backlog se ordena por valor para el usuario principal: una persona responsabl
 - Dado un usuario sin permisos suficientes, cuando intenta asignar o eliminar un lead, entonces la operación es rechazada.
 - Dado un agente, cuando consulta datos, entonces solo ve el alcance permitido por su rol y configuración.
 
-## HU-06 Integrar, probar y reproducir una entrega
+## HU-06 Preparar una ruta internacional
+
+**Como** asesor de admisiones, **quiero** ver qué información le falta a un prospecto internacional antes de conectarlo con una escuela o asesor aliado, **para** ofrecer una ruta responsable y personalizada sin prometer una visa, licencia o crédito.
+
+- Dado un prospecto marcado como internacional, cuando abro Rutas globales, entonces veo su preparación y siguiente desbloqueo.
+- Dado un prospecto sin información médica, financiación o fecha de inicio, cuando consulto su ruta, entonces el sistema identifica esos datos como faltantes.
+- Dado un prospecto con la información básica completa, cuando consulto su ruta, entonces aparece listo para asesoría internacional.
+
+## HU-07 Integrar, probar y reproducir una entrega
 
 **Como** equipo de desarrollo, **queremos** verificar cada cambio automáticamente y documentar su ejecución, **para** entregar una versión reproducible y confiable.
 

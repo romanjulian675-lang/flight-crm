@@ -19,6 +19,7 @@ El proyecto existente se conservará como punto de partida. Las mejoras realizad
 - [Lean y mejora](./11-lean-y-mejora.md)
 - [Trazabilidad](./12-trazabilidad-historia.md)
 - [Guion de sustentación](./13-guion-sustentacion.md)
+- [Investigación de Global Pathways](./14-investigacion-pathways.md)
 
 ## Comandos de demostración
 

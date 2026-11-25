@@ -25,6 +25,8 @@ Esta definición es una hipótesis de trabajo. Debe validarse con al menos dos u
 
 ## Decisión incorporada al MVP
 
-El MVP se enfocará en un recorrido: recibir un lead, asignarlo, mostrar si lleva más de 24 horas sin contacto, registrar la interacción y exigir un próximo paso. Esta decisión conecta la diferenciación con HU-01, HU-02 y HU-03.
+El MVP se enfocará en dos momentos conectados: recibir un lead, asignarlo, mostrar si lleva más de 24 horas sin contacto, registrar la interacción y exigir un próximo paso; y, cuando el prospecto sea internacional, mostrar una ruta de preparación antes de derivarlo a una alianza. Esta decisión conecta la diferenciación con HU-01, HU-02, HU-03 y HU-06.
+
+La primera versión no afirma que CG Flight Academy tenga convenios vigentes. El producto crea una vista de preparación para que el equipo descubra qué alianzas son útiles: universidad, escuela FAA/EASA, asesor migratorio, financiación o alojamiento.
 
 No se presentará la diferenciación como un resultado observado hasta completar la validación con usuarios.

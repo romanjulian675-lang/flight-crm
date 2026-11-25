@@ -41,6 +41,7 @@ export const es: Dict = {
     switchSchool: "Cambiar escuela",
     newLead: "Nuevo prospecto",
     reports: "Reportes",
+    pathways: "Rutas globales",
   },
   auth: {
     signInTitle: "Iniciar sesión",
@@ -240,6 +241,20 @@ export const es: Dict = {
     noData: "Aún no hay prospectos. Agrega el primero con \"Nuevo prospecto\".",
     waiting: "esperando {t}",
     noNextStep: "Prospectos abiertos sin siguiente paso",
+  },
+  pathways: {
+    title: "Rutas globales",
+    subtitle: "Prepara a los estudiantes internacionales para la conversación correcta sin prometer elegibilidad antes de una revisión.",
+    empty: "Aún no hay prospectos marcados como internacionales.",
+    count: "{n} prospectos internacionales",
+    readiness: "Preparación de ruta",
+    ready: "Listo para asesoría",
+    missing: "Información faltante",
+    language: "Idioma preferido",
+    next: "Siguiente desbloqueo",
+    actions: { MEDICAL: "Confirmar paso médico", FUNDING: "Aclarar financiación", TIMELINE: "Confirmar cuándo inicia", ADVISOR: "Conectar con asesor internacional" },
+    routeHint: "Ruta potencial, no decisión de visa, licencia o créditos",
+    openLead: "Abrir prospecto",
   },
   reports: {
     title: "Reportes",

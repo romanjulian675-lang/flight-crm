@@ -43,6 +43,7 @@ export const en = {
     switchSchool: "Switch school",
     newLead: "New lead",
     reports: "Reports",
+    pathways: "Global pathways",
   },
   auth: {
     signInTitle: "Sign in",
@@ -238,6 +239,20 @@ export const en = {
     noData: "No leads yet. Add your first one with \"New lead\".",
     waiting: "waiting {t}",
     noNextStep: "Open leads with no next step",
+  },
+  pathways: {
+    title: "Global pathways",
+    subtitle: "Prepare international students for the right next conversation without promising eligibility before an advisor reviews the case.",
+    empty: "No international leads are marked yet.",
+    count: "{n} international leads",
+    readiness: "Pathway readiness",
+    ready: "Ready for advisor",
+    missing: "Missing information",
+    language: "Preferred language",
+    next: "Next unlock",
+    actions: { MEDICAL: "Confirm medical step", FUNDING: "Clarify funding", TIMELINE: "Confirm start timeline", ADVISOR: "Match with an international advisor" },
+    routeHint: "Potential route, not a visa, licence or credit decision",
+    openLead: "Open lead",
   },
   reports: {
     title: "Reports",
