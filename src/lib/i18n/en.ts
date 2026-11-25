@@ -253,6 +253,11 @@ export const en = {
     actions: { MEDICAL: "Confirm medical step", FUNDING: "Clarify funding", TIMELINE: "Confirm start timeline", ADVISOR: "Match with an international advisor" },
     routeHint: "Potential route, not a visa, licence or credit decision",
     openLead: "Open lead",
+    exchange: {
+      title: "Pathway exchange", subtitle: "Build a verified route between your student and the next institution.", partnerCatalog: "Partner catalog", addPartner: "Add partner", partnerName: "Institution or partner name", country: "Country", email: "Contact email", notes: "Notes / scope", targetCountry: "Target country", targetProgram: "Target program", hours: "Current flight hours", license: "Current license or certificate", english: "English level", profile: "Pathway passport", createReferral: "Create referral", choosePartner: "Choose a partner", referralNote: "Why this partner / next handoff", referrals: "Referrals", noReferrals: "No referrals yet.", outcome: "Outcome or response", verified: "Verified",
+      types: { UNIVERSITY: "University", FLIGHT_SCHOOL: "Flight school", LICENSING_AUTHORITY: "Licensing authority", LANGUAGE_SCHOOL: "Language school", OTHER: "Other" },
+      status: { DRAFT: "Draft", CONSENT_PENDING: "Consent pending", SENT: "Sent", ACCEPTED: "Accepted", DECLINED: "Declined", CONVERTED: "Converted" },
+    },
   },
   reports: {
     title: "Reports",

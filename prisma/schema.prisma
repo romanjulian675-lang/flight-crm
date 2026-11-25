@@ -125,6 +125,9 @@ model Organization {
   assignmentRules  AssignmentRule[]
   whatsappAccounts WhatsAppAccount[]
   whatsappMessages WhatsAppMessage[]
+  pathwayPartners PathwayPartner[]
+  pathwayProfiles PathwayProfile[]
+  pathwayReferrals PathwayReferral[]
 }
 
 enum AssignMode {
@@ -299,12 +302,90 @@ model Lead {
   tasks            Task[]
   intakeEvents     IntakeEvent[]
   whatsappMessages WhatsAppMessage[]
+  pathwayProfile   PathwayProfile?
+  pathwayReferrals PathwayReferral[]
 
   @@index([orgId, stageId, position])
   @@index([orgId, ownerId])
   @@index([orgId, email])
   @@index([orgId, phone])
   @@index([orgId, createdAt])
+}
+
+enum PathwayPartnerType {
+  UNIVERSITY
+  FLIGHT_SCHOOL
+  LICENSING_AUTHORITY
+  LANGUAGE_SCHOOL
+  OTHER
+}
+
+enum PathwayReferralStatus {
+  DRAFT
+  CONSENT_PENDING
+  SENT
+  ACCEPTED
+  DECLINED
+  CONVERTED
+}
+
+model PathwayPartner {
+  id             String             @id @default(uuid()) @db.Uuid
+  orgId          String             @db.Uuid
+  org            Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name           String
+  country        String
+  type           PathwayPartnerType @default(OTHER)
+  website        String?
+  contactEmail   String?
+  verified       Boolean            @default(false)
+  lastReviewedAt DateTime?          @db.Timestamptz(3)
+  active         Boolean            @default(true)
+  notes          String?
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime           @updatedAt @db.Timestamptz(3)
+  referrals      PathwayReferral[]
+
+  @@index([orgId, active])
+}
+
+model PathwayProfile {
+  id             String       @id @default(uuid()) @db.Uuid
+  orgId          String       @db.Uuid
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId         String       @unique @db.Uuid
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  targetCountry  String?
+  targetProgram  String?
+  currentHours   Int?
+  currentLicense String?
+  englishLevel   String?
+  documents      String[]     @default([])
+  consentAt      DateTime?    @db.Timestamptz(3)
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([orgId, targetCountry])
+}
+
+model PathwayReferral {
+  id        String                @id @default(uuid()) @db.Uuid
+  orgId     String                @db.Uuid
+  org       Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId    String                @db.Uuid
+  lead      Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  partnerId String                @db.Uuid
+  partner   PathwayPartner        @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  status    PathwayReferralStatus @default(DRAFT)
+  note      String?
+  consentAt DateTime?             @db.Timestamptz(3)
+  sentAt    DateTime?             @db.Timestamptz(3)
+  outcome   String?
+  createdAt DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime              @updatedAt @db.Timestamptz(3)
+
+  @@index([orgId, status])
+  @@index([leadId, createdAt])
 }
 
 enum ActivityType {
