@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
   // purpose so no school's data is ever prerendered or cached across tenants.
   cacheComponents: false,
   poweredByHeader: false,
-  serverExternalPackages: ["embedded-postgres"],
   turbopack: {
     rules: {
       "*.css": {
