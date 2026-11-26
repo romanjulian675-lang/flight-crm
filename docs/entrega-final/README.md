@@ -20,6 +20,10 @@ El proyecto existente se conservará como punto de partida. Las mejoras realizad
 - [Trazabilidad](./12-trazabilidad-historia.md)
 - [Guion de sustentación](./13-guion-sustentacion.md)
 - [Investigación de Global Pathways](./14-investigacion-pathways.md)
+- [Descubrimiento con CG Flight Academy](./15-descubrimiento-cg-flight-academy.md)
+- [Propuesta de innovación](./16-propuesta-innovacion.md)
+- [Aportes y reflexión](./17-aportes-y-reflexion.md)
+- [Póster](./Poster_Flight_CRM.pptx)
 
 ## Comandos de demostración
 

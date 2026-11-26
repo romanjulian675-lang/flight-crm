@@ -2,20 +2,20 @@
 
 ## Historia seleccionada
 
-**HU-01: Ver leads sin primer contacto.**
+**HU-06: Preparar una ruta internacional (Global Pathways).** También se conserva HU-01 como recorrido de la demo.
 
-## Recorrido completo
+## Recorrido completo HU-06
 
-| Etapa | Evidencia que debe enlazarse | Estado |
+| Etapa | Evidencia | Estado |
 |---|---|---|
-| Necesidad del cliente | Registro de entrevista u observación | Pendiente |
-| Priorización | Product Backlog y objetivo del sprint | Preparado |
-| Desarrollo | Rama, commit o Pull Request | Completar enlace |
-| Prueba | `tests/integration/crm.test.ts` — dashboard y leads sin contacto | Disponible en repositorio |
-| Revisión | Comentario o aprobación de Pull Request | Completar enlace |
-| Integración | Workflow de GitHub Actions | Completar enlace |
-| Entrega | Demo local o entorno alojado | Completar enlace |
-| Resultado | Indicador antes/después y feedback | Pendiente |
+| Necesidad del cliente | `10-validacion-cliente.md`, sesión del 25 nov | Registrado |
+| Priorización | `02-product-backlog.md` (prioridad 6, "Nuevo") y Sprint 2 en `04-plan-de-sprints.md` | Hecho |
+| Desarrollo | Rama `sonarcloudtests`, commits `5991172` y `cd1ef8f` | Hecho |
+| Prueba | `tests/unit/pathways.test.ts` y `tests/unit/pathway-exchange.test.ts` | Hecho |
+| Revisión | PR #3 hacia `main` [COMPLETAR: enlace] | Pendiente |
+| Integración | Ejecución del workflow en el PR #3 [COMPLETAR: enlace] | Pendiente |
+| Entrega | `npm run verify:demo` en entorno local | Hecho |
+| Resultado | Indicador en `10-validacion-cliente.md` | Esperado |
 
 ## Evidencia técnica existente
 

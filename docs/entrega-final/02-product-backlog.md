@@ -10,7 +10,8 @@ El backlog se ordena por valor para el usuario principal: una persona responsabl
 | 4 | HU-04 Reservar una llamada | Convierte el interés en una acción concreta | Existente, por verificar |
 | 5 | HU-05 Proteger la información de cada escuela | Mantiene privacidad entre clientes | Existente, por verificar |
 | 6 | HU-06 Preparar una ruta internacional | Convierte un lead internacional en un plan de orientación accionable | Nuevo, implementar |
-| 7 | HU-07 Integrar, probar y reproducir una entrega | Reduce riesgo al publicar cambios | Parcial, completar en la entrega |
+| 7 | HU-07 Registrar una derivación a un aliado | Conserva contexto y evita promesas o traspasos informales | Hipótesis, validar antes de implementar |
+| 8 | HU-08 Integrar, probar y reproducir una entrega | Reduce riesgo al publicar cambios | Parcial, completar en la entrega |
 
 ## Deuda técnica priorizada
 
@@ -66,7 +67,15 @@ El backlog se ordena por valor para el usuario principal: una persona responsabl
 - Dado un prospecto sin información médica, financiación o fecha de inicio, cuando consulto su ruta, entonces el sistema identifica esos datos como faltantes.
 - Dado un prospecto con la información básica completa, cuando consulto su ruta, entonces aparece listo para asesoría internacional.
 
-## HU-07 Integrar, probar y reproducir una entrega
+## HU-07 Registrar una derivación a un aliado
+
+**Como** asesor de CG Flight Academy, **quiero** registrar una posible derivación a una institución o aliado con consentimiento y estado de revisión, **para** conservar el contexto del estudiante sin presentar una alianza no confirmada como disponible.
+
+- Dado un prospecto con una ruta internacional, cuando registro una derivación, entonces queda asociado el aliado, responsable, estado y próximo paso.
+- Dado que no existe consentimiento, cuando intento compartir datos del prospecto, entonces el sistema no permite marcar la derivación como enviada.
+- Dado que una ruta no ha sido validada por un responsable, cuando la consulto, entonces aparece como hipótesis o en revisión.
+
+## HU-08 Integrar, probar y reproducir una entrega
 
 **Como** equipo de desarrollo, **queremos** verificar cada cambio automáticamente y documentar su ejecución, **para** entregar una versión reproducible y confiable.
 

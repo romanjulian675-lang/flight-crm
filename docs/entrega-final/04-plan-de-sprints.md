@@ -24,14 +24,20 @@ Permitir que una escuela de aviación capture, distribuya y dé seguimiento a su
 
 **Evidencia requerida:** Pull Request revisado, workflow ejecutado, cobertura, build, demo y registro de mejora Lean.
 
-## Roles propuestos
+## Ejecución real (según historial de Git)
 
-Los nombres se deben completar con los integrantes reales del equipo.
+| Etapa | Fechas | Objetivo | Resultado verificable |
+|---|---|---|---|
+| Punto de partida | 19–23 oct | MVP del equipo FlightLeads | Commits iniciales: pipeline multiescuela, captura de leads, roles, WhatsApp, rediseño de UI |
+| Sprint 1 | 12 nov | Calidad automatizada | CI en GitHub Actions, SonarQube Cloud y cobertura; PR #2 integrado en `main` |
+| Sprint 2 | 24–25 nov | Entrega confiable y diferenciación | `/api/health`, npm audit, demo reproducible (`verify:demo`), Global Pathways (HU-06) e intercambio de rutas tras la sesión con el cliente |
+
+## Roles
 
 | Rol | Integrante | Responsabilidad |
 |---|---|---|
-| Product Owner | Pendiente | Priorizar valor, validar criterios y recoger feedback |
-| Scrum Master | Pendiente | Facilitar eventos, visibilizar bloqueos y promover mejoras |
-| Developer | Pendiente | Implementar, probar, revisar e integrar cambios |
+| Product Owner | [COMPLETAR] | Priorizar valor y recoger feedback del cliente |
+| Scrum Master | [COMPLETAR] | Facilitar eventos y visibilizar bloqueos |
+| Developer | Juan Diego Rodríguez Velásquez | Sprints 1 y 2: CI, pruebas, health check, Global Pathways |
 
-Una persona puede combinar roles, pero cada integrante debe tener una contribución verificable.
+El MVP de octubre (punto de partida) fue construido por el equipo FlightLeads; ver `01-estado-inicial.md`.
