@@ -31,5 +31,5 @@ Se configuró Vitest con un único worker basado en threads:
 | Qué funcionó | La CI detectó problemas antes de integrar; la sesión con el cliente reorientó Global Pathways |
 | Qué dificultó el flujo | Pruebas inestables en Windows; trabajo acumulado en una sola rama; validación con usuarios tardía |
 | Mejora acordada | PRs pequeños y validar con el cliente antes de implementar una historia nueva |
-| Responsable | [COMPLETAR] |
+| Responsable | Equipo FlightLeads; seguimiento técnico de Juan Diego Rodríguez Velásquez |
 | Cómo se comprobará | Número de días entre el primer commit de una historia y su integración en `main` |

@@ -12,8 +12,8 @@
 | Priorización | `02-product-backlog.md` (prioridad 6, "Nuevo") y Sprint 2 en `04-plan-de-sprints.md` | Hecho |
 | Desarrollo | Rama `sonarcloudtests`, commits `5991172` y `cd1ef8f` | Hecho |
 | Prueba | `tests/unit/pathways.test.ts` y `tests/unit/pathway-exchange.test.ts` | Hecho |
-| Revisión | PR #3 hacia `main` [COMPLETAR: enlace] | Pendiente |
-| Integración | Ejecución del workflow en el PR #3 [COMPLETAR: enlace] | Pendiente |
+| Revisión | [PR #3 hacia `main`](https://github.com/romanjulian675-lang/flight-crm/pull/3) | Evidencia disponible |
+| Integración | [Ejecución verde del workflow](https://github.com/romanjulian675-lang/flight-crm/actions/runs/45897782504) | Evidencia disponible |
 | Entrega | `npm run verify:demo` en entorno local | Hecho |
 | Resultado | Indicador en `10-validacion-cliente.md` | Esperado |
 

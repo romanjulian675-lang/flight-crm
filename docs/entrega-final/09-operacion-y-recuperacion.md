@@ -38,6 +38,14 @@ npm run verify:demo
 
 El comando confirma el endpoint, la escuela demo, el número de leads y los usuarios de demostración.
 
+## Evidencia de entrega
+
+## Evidencia de entrega
+
+- PR #3: https://github.com/romanjulian675-lang/flight-crm/pull/3
+- Ejecución verde de CI: https://github.com/romanjulian675-lang/flight-crm/actions/runs/45897782504
+- Preview Vercel: https://flight-crm-git-sonarcloudtests-romanschedule-s-projects.vercel.app
+
 ## Recuperación
 
 1. Revisar el commit y el workflow de la última versión funcional.

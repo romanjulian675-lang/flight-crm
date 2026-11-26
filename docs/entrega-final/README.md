@@ -44,3 +44,13 @@ npm run verify:demo
 ## Regla de evidencia
 
 Cada afirmación sobre usuarios, validación, reuniones o resultados debe estar respaldada por una captura, enlace, commit, ejecución registrada o nota fechada. Los elementos pendientes están marcados explícitamente y no deben presentarse como realizados hasta contar con evidencia.
+
+## Enlaces de entrega
+
+- Pull Request: https://github.com/romanjulian675-lang/flight-crm/pull/3
+- CI verde (Test, build and analyze + Dependency audit): https://github.com/romanjulian675-lang/flight-crm/actions/runs/45897782504
+- Preview Vercel: https://flight-crm-git-sonarcloudtests-romanschedule-s-projects.vercel.app
+
+La preview de Vercel puede solicitar autenticación del proyecto; la evidencia de integración reproducible es la ejecución verde de Actions enlazada arriba.
+
+Cada afirmación sobre usuarios, validación, reuniones o resultados debe estar respaldada por una captura, enlace, commit, ejecución registrada o nota fechada. Los elementos pendientes están marcados explícitamente y no deben presentarse como realizados hasta contar con evidencia.

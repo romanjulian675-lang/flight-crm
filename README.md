@@ -15,6 +15,12 @@ npm run db:migrate     # first time only, in another terminal
 npm run db:seed        # demo school with 30 leads
 ```
 
+## Demo y evidencia de entrega
+
+- Preview Vercel: https://flight-crm-git-sonarcloudtests-romanschedule-s-projects.vercel.app
+- Pull Request final: https://github.com/romanjulian675-lang/flight-crm/pull/3
+- CI verde: https://github.com/romanjulian675-lang/flight-crm/actions/runs/45897782504
+
 Demo logins (password `demo-password-2026`): `owner@demo.local`, `manager@demo.local`, `ana@demo.local`, `luis@demo.local`.
 
 Checks: `npm test` (65 tests, uses the `flightcrm_test` database), `npm run typecheck`, `npm run lint`.

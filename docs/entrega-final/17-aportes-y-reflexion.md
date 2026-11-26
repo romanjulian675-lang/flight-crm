@@ -13,6 +13,6 @@ Se usaron asistentes de IA (Claude) para apoyar la implementación, la documenta
 
 ## Reflexión
 
-- **Qué aprendí:** [COMPLETAR, 2 líneas]
+- **Qué aprendí:** Aprendí a convertir un MVP existente en un incremento demostrable usando backlog, CI, pruebas y una PR trazable. También aprendí que una idea innovadora debe validarse antes de construirla y que los bloqueos de infraestructura deben quedar visibles y recuperables.
 - **Dificultad principal:** validar con usuarios tarde; la retroalimentación llegó cuando Global Pathways ya estaba construido.
 - **Qué haría diferente:** entrevistar a dos usuarios antes del primer sprint e integrar en PRs pequeños.

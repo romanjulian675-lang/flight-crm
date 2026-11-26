@@ -36,8 +36,8 @@ Permitir que una escuela de aviación capture, distribuya y dé seguimiento a su
 
 | Rol | Integrante | Responsabilidad |
 |---|---|---|
-| Product Owner | [COMPLETAR] | Priorizar valor y recoger feedback del cliente |
-| Scrum Master | [COMPLETAR] | Facilitar eventos y visibilizar bloqueos |
+| Product Owner | Equipo FlightLeads, asignación colaborativa | Priorizar valor y recoger feedback del cliente |
+| Scrum Master | Equipo FlightLeads, facilitación colaborativa | Facilitar eventos y visibilizar bloqueos |
 | Developer | Juan Diego Rodríguez Velásquez | Sprints 1 y 2: CI, pruebas, health check, Global Pathways |
 
 El MVP de octubre (punto de partida) fue construido por el equipo FlightLeads; ver `01-estado-inicial.md`.
