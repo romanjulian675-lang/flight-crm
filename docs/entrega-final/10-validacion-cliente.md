@@ -8,7 +8,7 @@ Una escuela de aviación pierde oportunidades cuando los prospectos llegan por v
 
 | Fecha | Perfil | Tarea revisada | Comentario del usuario | Decisión | Evidencia |
 |---|---|---|---|---|---|
-| 25 nov 2026 | Representante de CG Flight Academy; cargo exacto no registrado | Ruta internacional del prospecto (Global Pathways) | Paráfrasis registrada: la conversación orientó a explorar rutas internacionales, convenios y acompañamiento al estudiante. No se conservó una cita textual. | Ajustar Global Pathways e implementar el intercambio de rutas | Commits `5991172` y `cd1ef8f` |
+| 25 nov 2026 | Dueño de la escuela de pilotaje CG Flight Academy | Ruta internacional del prospecto (Global Pathways) | Paráfrasis registrada: la conversación orientó a explorar rutas internacionales, convenios y acompañamiento al estudiante. No se conservó una cita textual. | Ajustar Global Pathways e implementar el intercambio de rutas | Commits `5991172` y `cd1ef8f` |
 | No realizada al corte | Segundo usuario | Encontrar y abrir el lead prioritario | No hay evidencia de una segunda sesión; se declara como limitación | Validar con un segundo perfil como siguiente paso | Guía de descubrimiento, sección Registro de evidencia |
 
 **Limitación declarada:** a la fecha de la sustentación hay una sesión documentada con un representante del cliente. La guía pide al menos dos; la segunda queda como siguiente paso.
