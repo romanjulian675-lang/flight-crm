@@ -41,6 +41,7 @@ export const es: Dict = {
     switchSchool: "Cambiar escuela",
     newLead: "Nuevo prospecto",
     reports: "Reportes",
+    pathways: "Rutas globales",
   },
   auth: {
     signInTitle: "Iniciar sesión",
@@ -240,6 +241,25 @@ export const es: Dict = {
     noData: "Aún no hay prospectos. Agrega el primero con \"Nuevo prospecto\".",
     waiting: "esperando {t}",
     noNextStep: "Prospectos abiertos sin siguiente paso",
+  },
+  pathways: {
+    title: "Rutas globales",
+    subtitle: "Prepara a los estudiantes internacionales para la conversación correcta sin prometer elegibilidad antes de una revisión.",
+    empty: "Aún no hay prospectos marcados como internacionales.",
+    count: "{n} prospectos internacionales",
+    readiness: "Preparación de ruta",
+    ready: "Listo para asesoría",
+    missing: "Información faltante",
+    language: "Idioma preferido",
+    next: "Siguiente desbloqueo",
+    actions: { MEDICAL: "Confirmar paso médico", FUNDING: "Aclarar financiación", TIMELINE: "Confirmar cuándo inicia", ADVISOR: "Conectar con asesor internacional" },
+    routeHint: "Ruta potencial, no decisión de visa, licencia o créditos",
+    openLead: "Abrir prospecto",
+    exchange: {
+      title: "Intercambio de rutas", subtitle: "Construye una ruta verificada entre el estudiante y su siguiente instituciÃ³n.", partnerCatalog: "CatÃ¡logo de aliados", addPartner: "Agregar aliado", partnerName: "Nombre de instituciÃ³n o aliado", country: "PaÃ­s", email: "Correo de contacto", notes: "Notas / alcance", targetCountry: "PaÃ­s objetivo", targetProgram: "Programa objetivo", hours: "Horas de vuelo actuales", license: "Licencia o certificado actual", english: "Nivel de inglÃ©s", profile: "Pasaporte de ruta", createReferral: "Crear derivaciÃ³n", choosePartner: "Elegir aliado", referralNote: "Motivo del aliado / siguiente entrega", referrals: "Derivaciones", noReferrals: "AÃºn no hay derivaciones.", outcome: "Resultado o respuesta", verified: "Verificado",
+      types: { UNIVERSITY: "Universidad", FLIGHT_SCHOOL: "Academia de vuelo", LICENSING_AUTHORITY: "Autoridad de licencias", LANGUAGE_SCHOOL: "Escuela de idiomas", OTHER: "Otro" },
+      status: { DRAFT: "Borrador", CONSENT_PENDING: "Consentimiento pendiente", SENT: "Enviado", ACCEPTED: "Aceptado", DECLINED: "Rechazado", CONVERTED: "Convertido" },
+    },
   },
   reports: {
     title: "Reportes",

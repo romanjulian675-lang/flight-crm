@@ -1,0 +1,16 @@
+CREATE TYPE "PathwayPartnerType" AS ENUM ('UNIVERSITY', 'FLIGHT_SCHOOL', 'LICENSING_AUTHORITY', 'LANGUAGE_SCHOOL', 'OTHER');
+CREATE TYPE "PathwayReferralStatus" AS ENUM ('DRAFT', 'CONSENT_PENDING', 'SENT', 'ACCEPTED', 'DECLINED', 'CONVERTED');
+CREATE TABLE "PathwayPartner" ("id" UUID NOT NULL, "orgId" UUID NOT NULL, "name" TEXT NOT NULL, "country" TEXT NOT NULL, "type" "PathwayPartnerType" NOT NULL DEFAULT 'OTHER', "website" TEXT, "contactEmail" TEXT, "verified" BOOLEAN NOT NULL DEFAULT false, "lastReviewedAt" TIMESTAMPTZ(3), "active" BOOLEAN NOT NULL DEFAULT true, "notes" TEXT, "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMPTZ(3) NOT NULL, CONSTRAINT "PathwayPartner_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "PathwayProfile" ("id" UUID NOT NULL, "orgId" UUID NOT NULL, "leadId" UUID NOT NULL, "targetCountry" TEXT, "targetProgram" TEXT, "currentHours" INTEGER, "currentLicense" TEXT, "englishLevel" TEXT, "documents" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[], "consentAt" TIMESTAMPTZ(3), "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMPTZ(3) NOT NULL, CONSTRAINT "PathwayProfile_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "PathwayReferral" ("id" UUID NOT NULL, "orgId" UUID NOT NULL, "leadId" UUID NOT NULL, "partnerId" UUID NOT NULL, "status" "PathwayReferralStatus" NOT NULL DEFAULT 'DRAFT', "note" TEXT, "consentAt" TIMESTAMPTZ(3), "sentAt" TIMESTAMPTZ(3), "outcome" TEXT, "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMPTZ(3) NOT NULL, CONSTRAINT "PathwayReferral_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "PathwayProfile_leadId_key" ON "PathwayProfile"("leadId");
+CREATE INDEX "PathwayPartner_orgId_active_idx" ON "PathwayPartner"("orgId", "active");
+CREATE INDEX "PathwayProfile_orgId_targetCountry_idx" ON "PathwayProfile"("orgId", "targetCountry");
+CREATE INDEX "PathwayReferral_orgId_status_idx" ON "PathwayReferral"("orgId", "status");
+CREATE INDEX "PathwayReferral_leadId_createdAt_idx" ON "PathwayReferral"("leadId", "createdAt");
+ALTER TABLE "PathwayPartner" ADD CONSTRAINT "PathwayPartner_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PathwayProfile" ADD CONSTRAINT "PathwayProfile_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PathwayProfile" ADD CONSTRAINT "PathwayProfile_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PathwayReferral" ADD CONSTRAINT "PathwayReferral_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PathwayReferral" ADD CONSTRAINT "PathwayReferral_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PathwayReferral" ADD CONSTRAINT "PathwayReferral_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "PathwayPartner"("id") ON DELETE CASCADE ON UPDATE CASCADE;

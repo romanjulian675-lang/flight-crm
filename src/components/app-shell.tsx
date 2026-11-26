@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { BarChart3, CheckSquare, ChartNoAxesColumn, ChevronsUpDown, Columns3, LayoutDashboard, LogOut, Menu, MessageCircle, Plug, Plus, Search, Settings, Users, X } from "lucide-react";
+import { BarChart3, CheckSquare, ChartNoAxesColumn, ChevronsUpDown, Columns3, Globe2, LayoutDashboard, LogOut, Menu, MessageCircle, Plug, Plus, Search, Settings, Users, X } from "lucide-react";
 import { signOut, switchSchool } from "@/app/actions/session";
 import { useI18n } from "@/components/i18n-provider";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -68,6 +68,7 @@ export function AppShell({ me, org, orgs, canAssign, canManage, members, waUnrea
     { href: "/", label: t.nav.dashboard, icon: LayoutDashboard },
     { href: "/pipeline", label: t.nav.pipeline, icon: Columns3 },
     { href: "/reports", label: t.nav.reports, icon: ChartNoAxesColumn },
+    { href: "/pathways", label: t.nav.pathways, icon: Globe2 },
     ...(waUnread !== null ? [{ href: "/inbox", label: t.nav.inbox, icon: MessageCircle, badge: waUnread }] : []),
     { href: "/leads", label: t.nav.leads, icon: Users },
     { href: "/tasks", label: t.nav.tasks, icon: CheckSquare },

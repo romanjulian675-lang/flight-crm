@@ -12,10 +12,70 @@ permissions:
   contents: read
 
 jobs:
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run npm audit
+        id: audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > npm-audit.json
+          status=$?
+          cat npm-audit.json
+          exit $status
+
+      - name: Summarize dependency audit
+        if: always()
+        shell: bash
+        run: |
+          echo "## Dependency audit" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.audit.outcome }}" = "success" ]; then
+            echo "No audit findings at the configured npm threshold." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "npm audit reported findings. See the uploaded npm-audit-report artifact; remediation is tracked before making this check blocking." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload npm audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: npm-audit-report
+          path: npm-audit.json
+
   quality:
     name: Test, build and analyze
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: flightcrm
+          POSTGRES_PASSWORD: flightcrm
+          POSTGRES_DB: flightcrm
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U flightcrm -d flightcrm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     env:
       DATABASE_URL: postgresql://flightcrm:flightcrm@localhost:5434/flightcrm
       TEST_DATABASE_URL: postgresql://flightcrm:flightcrm@localhost:5434/flightcrm_test
@@ -32,19 +92,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Start test database
         run: |
-          npm run db:local > db-local.log 2>&1 &
-          for attempt in {1..30}; do
-            if timeout 1 bash -c '</dev/tcp/127.0.0.1/5434' 2>/dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat db-local.log
-          exit 1
+          npm ci --ignore-scripts
+          npx prisma generate
 
       - name: Run tests with coverage
         run: npm run test:coverage
