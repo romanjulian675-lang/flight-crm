@@ -128,6 +128,49 @@ model Organization {
   pathwayPartners PathwayPartner[]
   pathwayProfiles PathwayProfile[]
   pathwayReferrals PathwayReferral[]
+  contentPosts     ContentPost[]
+}
+
+enum ContentStatus {
+  DRAFT
+  IN_REVIEW
+  NEEDS_CHANGES
+  APPROVED
+}
+
+/// Review and planning only. plannedAt never implies a provider scheduled the post.
+model ContentPost {
+  id             String        @id @default(uuid()) @db.Uuid
+  orgId          String        @db.Uuid
+  org            Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title          String
+  caption        String        @default("")
+  videoUrl       String?
+  coverUrl       String?
+  status         ContentStatus @default(DRAFT)
+  plannedAt      DateTime?      @db.Timestamptz(3)
+  approvedBy     String?
+  approvedAt     DateTime?      @db.Timestamptz(3)
+  version        Int           @default(1)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+  comments       ContentComment[]
+
+  @@unique([id, orgId])
+  @@index([orgId, plannedAt])
+  @@index([orgId, status])
+}
+
+model ContentComment {
+  id        String      @id @default(uuid()) @db.Uuid
+  postId    String      @db.Uuid
+  orgId     String      @db.Uuid
+  post      ContentPost @relation(fields: [postId, orgId], references: [id, orgId], onDelete: Cascade)
+  author    String
+  body      String
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([postId, createdAt])
 }
 
 enum AssignMode {
