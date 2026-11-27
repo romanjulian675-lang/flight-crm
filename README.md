@@ -106,3 +106,19 @@ Lead sources → **WhatsApp Business**. Each school connects its own number (Pho
 5. Messaging: email/SMS templates + automated follow-ups, consent tracking (TCPA / CAN-SPAM).
 6. Selling it: Stripe plans, landing page, onboarding, terms & privacy.
 7. Integrations: push enrolled students to Flight Deck.
+
+## Instagram content review
+
+The **Content** sidebar opens `/content`. Every school has its own shared review board.
+Add a title, caption, direct HTTPS video link, optional cover link, and optional planned date
+(default time: 16:00 in the school's time zone). Video files must already be hosted: this version
+does not upload local files or turn sharing-page URLs into playable media.
+
+Team members can create/edit drafts, comment, and submit for review. Owners/managers can approve
+or request changes with feedback. An edit to content or its planned date clears approval. Version
+checks prevent a stale browser tab from approving or overwriting a newer edit.
+
+The posting plan can be filtered by date and status. Planned dates are **not confirmed schedules**.
+This module does not send anything to Instagram; publishing permissions, durable media uploads,
+and an approved-post dispatch worker remain separate integration work. Existing Meta lead intake
+and its scopes are unchanged. Apply migrations with `npm run db:migrate` before opening Content.
